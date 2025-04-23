@@ -55,3 +55,87 @@
 {
 	regAl = regAl & regBl;
 }
+
+#
+# rA = rB & mask (10 bits)
+# => and rA, rB, #mask
+:and regA, eregA, #imm1625 is group=7 & ins0412=0x16 & regA ; imm1625 & imm2627=0 & eregA
+{
+    regA = eregA & imm1625;
+}
+
+#
+# rA = rB & mask (32 bits)
+# => and rA, rB, #mask
+:and regA, eregA, #mask is group=7 & ins0412=0x16 & regA ; imm1622 & imm2325 & imm2627=1 & eregA
+[
+    mask = ( (0x80 | imm1622) << 24 ) >> imm2325;
+]
+{
+    regA = eregA & mask;
+}
+
+#
+# rA = rB & mask (24 bits)
+# => and rA, rB, #mask
+:and regA, eregA, #mask is group=7 & ins0412=0x16 & regA ; imm1622 & imm2325 & imm2627=2 & eregA
+[
+    mask = ( (0x80 | imm1622) << 16 ) >> imm2325;
+]
+{
+    regA = eregA & mask;
+}
+
+#
+# rA = rB & mask (16 bits)
+# => and rA, rB, #mask
+:and regA, eregA, #mask is group=7 & ins0412=0x16 & regA ; imm1622 & imm2325 & imm2627=3 & eregA
+[
+    mask = ( (0x80 | imm1622) << 8 ) >> imm2325;
+]
+{
+    regA = eregA & mask;
+}
+
+
+#
+# rA = rB & mask (10 bits inverted)
+# => and rA, rB, #mask
+:and regA, eregA, #mask is group=7 & ins0412=0x17 & regA ; imm1625 & imm2627=0 & eregA
+[ mask = imm1625^0xffffffff;]
+{
+    regA = eregA & mask;
+}
+
+#
+# rA = rB & mask (32 bits)
+# => and rA, rB, #mask
+:and regA, eregA, #mask is group=7 & ins0412=0x17 & regA ; imm1622 & imm2325 & imm2627=1 & eregA
+[
+    mask = (( (0x80 | imm1622) << 24 ) >> imm2325) ^ 0xffffffff;
+]
+{
+    regA = eregA & mask;
+}
+
+#
+# rA = rB & mask (24 bits)
+# => and rA, rB, #mask
+:and regA, eregA, #mask is group=7 & ins0412=0x17 & regA ; imm1622 & imm2325 & imm2627=2 & eregA
+[
+    mask = (( (0x80 | imm1622) << 16 ) >> imm2325) ^ 0xffffffff;
+]
+{
+    regA = eregA & mask;
+}
+
+#
+# rA = rB & mask (16 bits)
+# => and rA, rB, #mask
+:and regA, eregA, #mask is group=7 & ins0412=0x17 & regA ; imm1622 & imm2325 & imm2627=3 & eregA
+[
+    mask = (( (0x80 | imm1622) << 8 ) >> imm2325) ^ 0xffffffff;
+]
+{
+    regA = eregA & mask;
+}

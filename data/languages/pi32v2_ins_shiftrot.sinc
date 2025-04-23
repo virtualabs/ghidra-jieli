@@ -19,13 +19,38 @@
 	regAl = regAl << regBl;
 }
 
-#
+# 
 # rA = rB << shamt
 # => lsl rA, rB, shamt
 #
 :lsl regAl, regBl, imm0812 is group=5 & ins0707=0 & ins0303=0 & regAl & regBl & imm0812
 {
 	regAl = regBl << imm0812;
+}
+
+# 
+# rA = rC >> rB (r0 to r15)
+# => lsr rA, rB, rC
+:lsl eregA, eregB, eregC is group=7 & ins0012=0x1c8 ; eregA & eregC & eregB & imm1619=0
+{
+	eregA = eregB << eregC;
+}
+
+# 
+# rA = rC << rB (r0 to r15)
+# => lsl rA, rB, rC
+:lsl eregA, eregB, eregC is group=7 & ins0012=0x1c8 ; eregA & eregC & eregB & imm1619=1
+{
+	eregA = eregB << eregC;
+}
+
+#
+# rA = rB << #imm6
+# => lsl rA, rB, imm6
+:lsl eregA, eregB, imm6 is group=7 & ins0012=0x1c0 ; eregA & eregB & imm2627=0 & imm2425 & imm1619
+[imm6 = (imm2425 << 4) | imm1619;]
+{
+    eregA = eregB << imm6;
 }
 
 ###########################################################################################
@@ -41,6 +66,14 @@
 	regAl = regAl >> regBl;
 }
 
+# 
+# rA = rC >> rB (r0 to r15)
+# => lsr rA, rB, rC
+:lsr eregA, eregB, eregC is group=7 & ins0012=0x1c8 ; eregA & eregC & eregB & imm1619=2
+{
+	eregA = eregB >> eregC;
+}
+
 #
 # rA = rB >> shamt
 # => lsr rA, rB, shamt
@@ -48,6 +81,15 @@
 :lsr regAl, regBl, imm0812 is group=5 & ins0707=1 & ins0303=0 & regAl & regBl & imm0812
 {
 	regAl = regBl >> imm0812;
+}
+
+#
+# rA = rB >> imm6
+# => lsl rA, rB, imm6
+:lsl eregA, eregB, imm6 is group=7 & ins0012=0x1c0 ; eregA & eregB & imm2627=2 & imm2425 & imm1619
+[imm6 = (imm2425 << 4) | imm1619;]
+{
+    eregA = eregB >> imm6;
 }
 
 ###########################################################################################
@@ -74,6 +116,15 @@
 	regAl = regBl << imm0812;
 }
 
+#
+# rA = rB <<< imm6
+# => qasl rA, rB, imm6
+:qasl eregA, eregB, imm6 is group=7 & ins0012=0x1c0 ; eregA & eregB & imm2627=1 & imm2425 & imm1619
+[imm6 = (imm2425 << 4) | imm1619;]
+{
+    eregA = eregB << imm6;
+}
+
 ###########################################################################################
 # (Q) Arithmentic shift right
 ###########################################################################################
@@ -94,4 +145,21 @@
 :qasr regAl, regBl, imm0812 is group=5 & ins0707=1 & ins0303=1 & regAl & regBl & imm0812
 {
 	regAl = regBl s>> imm0812;
+}
+
+# 
+# rA = rC >> rB (r0 to r15)
+# => lsr rA, rB, rC
+:qasr eregA, eregB, eregC is group=7 & ins0012=0x1c8 ; eregA & eregC & eregB & imm1619=3
+{
+	eregA = eregB s>> eregC;
+}
+
+#
+# rA = rB >>> imm6
+# => qasr rA, rB, imm6
+:qasl eregA, eregB, imm6 is group=7 & ins0012=0x1c0 ; eregA & eregB & imm2627=3 & imm2425 & imm1619
+[imm6 = (imm2425 << 4) | imm1619;]
+{
+    eregA = eregB s>> imm6;
 }

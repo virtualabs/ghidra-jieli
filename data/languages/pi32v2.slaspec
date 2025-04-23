@@ -20,7 +20,87 @@ define register offset=0x0 size=8
 #
 define register offset=0x100 size=4
 	[ reti rete retx rets sr4 psr cnum sr7
-	  sr8  sr9  sr10 icfg usp ssp sp   pc ];
+	  sr8  sr9  sr10 icfg usp ssp sp pc cres];
+
+
+##
+# Pi32v2 Context register
+##
+
+define register offset=0x300 size=4 [ contextreg ];
+
+define context contextreg
+    in_then = (0, 0)
+    in_else = (1,1)
+    ctx_then_inst_count = (2,3)
+    ctx_else_inst_count = (4,5)
+    phase = (31,31)
+;
+
+##
+# Process instructions that may be part of an if...then...else structure
+##
+
+:^instruction is phase=0 & in_then=1 & ctx_then_inst_count>0 & instruction
+    [
+        ctx_then_inst_count=ctx_then_inst_count-1;
+        globalset(inst_next, ctx_then_inst_count);
+        phase=1;
+    ]
+    {
+        # Skip instruction if condition is not met (we are in the `then` branch)
+        if (cres != 1) goto inst_next;
+        build instruction;
+    }
+
+# No more instruction in `then` branch and no `else` branch.
+:"}" instruction is phase=0 & in_then=1 & ctx_then_inst_count=0 & ctx_else_inst_count=0 & instruction
+    [
+        in_then=0; globalset(inst_next, in_then);
+        phase=1;
+    ]
+    {
+        build instruction;
+    }
+
+# No more instructions in `then` branch, but some in the `else` branch
+# We switch from `in_then` to `in_else`
+:"} else {" instruction is phase=0 & in_then=1 & ctx_then_inst_count=0 & ctx_else_inst_count>0 & instruction
+    [
+        in_then=0; globalset(inst_next, in_then);
+        in_else=1; globalset(inst_next, in_else);
+        ctx_else_inst_count=ctx_else_inst_count-1;
+        phase=1;
+    ]
+    {
+        # Skip instruction if condition is met (we are in the `else` branch)
+        if (cres == 1) goto inst_next;
+        build instruction;
+    }
+
+# Processing `else` branch instruction
+:^instruction is phase=0 & in_else=1 & ctx_else_inst_count>0 & instruction
+    [
+        ctx_else_inst_count=ctx_else_inst_count-1;
+        globalset(inst_next, ctx_else_inst_count);
+        phase=1;
+    ]
+    {
+        # Skip instruction if condition is met (we are in the `else` branch)
+        if (cres == 1) goto inst_next;
+        build instruction;
+    }
+
+# No more instruction in `else` branch, exiting conditional execution
+# We set `in_else` to 0.
+:"}" instruction is phase=0 & in_else=1 & ctx_else_inst_count=0 & instruction
+    [
+        in_else=0; globalset(inst_next, in_else);
+        phase=1;        
+    ]
+    {
+        build instruction;
+    }
 
 #############################################################################
 #
@@ -60,6 +140,7 @@ define token instr(16)
 	imm0001s = (0,1) signed
 
 	imm0002 = (0,2)
+    imm0002s = (0,2) signed
 
 	imm0005s = (0,5) signed
 	imm0305  = (3,5)
@@ -96,8 +177,31 @@ define token instr(16)
 
 # Used by the group=7 instructions
 define token instr2(16)
+    imm1617 = (0,1)
+	imm1619 = (0,3)
 	imm1631 = (0,15)
+    imm1622 = (0, 6)
+    imm1623 = (0, 7)
+    imm1624 = (0, 8) signed
+    imm1625 = (0, 9)
+    imm1627 = (0,11)
+    imm2325 = (7, 9)
+    imm2425 = (8, 9)
+    imm2627 = (10,11)
+    imm2531 = (9, 15)
+    imm2427 = (8,11)
+    imm2831 = (12,15)
+
+    elsecnt = (12,13)
+    ifcnt = (14,15)
+
+	
+	eregA = (12,15)
+	eregC = (8,11)
+    esregC = (8, 11) signed
+	eregB = (4,7)
 ;
+
 
 # Even more bits for some group=7 instructions (ins0812=0x1f)
 define token instr3(16)
@@ -124,6 +228,9 @@ attach variables [ sregA ]
 
 attach variables [ dregA dregB ]
 	[ r0_r1 r2_r3 r4_r5 r6_r7 r8_r9 r10_r11 r12_r13 r14_r15 ];
+
+attach variables [ eregA eregB eregC]
+	[ r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 ];
 
 attach variables [ regCxle ]
 	[ r0 r2 r4 r6 ];
@@ -169,6 +276,12 @@ regCxl: regCxlo is regCxs=1 & regCxlo { export regCxlo; }
 jaddr9: res is imm0812 & imm0406s
 	[ res = ((imm0406s << 6) | (imm0812 << 1)) + inst_next; ]
 	{ export *:4 res; }
+
+
+#
+# 9-bit jump immediate (pc-relative) for 32-bits conditional jumps
+#
+jaddr9e: res is imm1624 [res = imm1624 * 2 + inst_next; ] { export *:4 res;}
 
 #
 # 12-bit jump immediate (pc-relative)
@@ -218,11 +331,13 @@ define pcodeop TODO;
 @include "pi32v2_ins_stack.sinc"
 @include "pi32v2_ins_move.sinc"
 @include "pi32v2_ins_arithops.sinc"
+@include "pi32v2_ins_para_arithops.sinc"
 @include "pi32v2_ins_logicops.sinc"
 @include "pi32v2_ins_shiftrot.sinc"
 @include "pi32v2_ins_bitops.sinc"
 @include "pi32v2_ins_loadimm.sinc"
 @include "pi32v2_ins_loadstore.sinc"
+@include "pi32v2_ins_ifthenelse.sinc"
 
 ##########################################################################################
 # Uncategorized #

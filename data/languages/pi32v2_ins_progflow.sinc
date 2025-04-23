@@ -144,6 +144,106 @@
 		goto jaddr9;
 }
 
+
+#
+# if (rA != #imm7) goto reladdr9
+# => jne rA, #imm7, reladdr9
+#
+:jne regA, #imm2531, jaddr9e is group=7 & ins0812=0x18 & ins0407=8 & regA ; imm2531 & jaddr9e
+{
+	if (regA != imm2531)
+		goto jaddr9e;
+}
+
+##
+# Unsigned conditional jumps (reg/imm10)
+##
+
+#
+# if (rB < rA) goto reladdr9
+# => jb rB, rA, reladdr9
+#
+:jb eregA, regA, jaddr9e is group=7 & ins0412=0x98 & regA; eregA & jaddr9e
+{
+    if (eregA < regA)
+        goto jaddr9e;
+}
+
+# 
+# if (rB > rA) goto reladdr9
+# => ja rB, rA, reladdr9
+#
+:ja eregA, regA, jaddr9e is group=7 & ins0412=0xC0 & regA; eregA & jaddr9e
+{
+    if (eregA > regA)
+        goto jaddr9e;
+}
+
+#
+# if (rB >= rA) goto reladdr9
+# => jge rB, rA, reladdr9
+#
+:jae eregA, regA, jaddr9e is group=7 & ins0412=0x90 & regA; eregA & jaddr9e
+{
+    if (eregA >= regA)
+        goto jaddr9e;
+}
+
+# Jump to jaddr9e if unsigned value of rB <= rA
+# if (rB <= rA) goto reladdr9
+# => jbe rB, rA, reladdr9
+#
+:jbe eregA, regA, jaddr9e is group=7 & ins0412=0xC8 & regA; eregA & jaddr9e
+{
+    if (eregA <= regA)
+        goto jaddr9e;
+}
+
+##
+# Signed conditional jumps (register/imm10)
+##
+
+# jump to jaddr9e if signed value of rA is lower than #imm10
+# ifs (rA < #imm10) goto jaddr9e
+# => jl rA, #imm10, jaddr9e
+:jl regA, #imm10, jaddr9e is group=7 & ins0712=0x3b & imm0406s & regA; imm2531 & jaddr9e
+[imm10 = (imm0406s << 7) | imm2531;]
+{
+    if (regA s< imm10)
+        goto jaddr9e;
+}
+
+# jump to jaddr9e if signed value of rA is greater than #imm10
+# ifs (rA > #imm10) goto jaddr9e
+# => jg rA, #imm10, jaddr9e
+:jg regA, #imm10, jaddr9e is group=7 & ins0712=0x3c & imm0406s & regA; imm2531 & jaddr9e
+[imm10 = (imm0406s << 7) | imm2531;]
+{
+    if (regA s> imm10)
+        goto jaddr9e;
+}
+
+# jump to jaddr9e if signed value of rA is lower or equal to #imm10
+# ifs (rA <= #imm10) goto jaddr9e
+# => jle rA, #imm10, jaddr9e
+:jle regA, #imm10, jaddr9e is group=7 & ins0712=0x3d & imm0406s & regA; imm2531 & jaddr9e
+[imm10 = (imm0406s << 7) | imm2531;]
+{
+    if (regA s<= imm10)
+        goto jaddr9e;
+}
+
+
+# jump to jaddr9e if signed value of rA is greater or equal to #imm10
+# ifs (rA >= #imm10) goto jaddr9e
+# => jge rA, #imm10, jaddr9e
+:jge regA, #imm10, jaddr9e is group=7 & ins0712=0x3a & imm0406s & regA; imm2531 & jaddr9e
+[imm10 = (imm0406s << 7) | imm2531;]
+{
+    if (regA s>= imm10)
+        goto jaddr9e;
+}
+
 ###########################################################################################
 # Code repeat     ( Impossible to implement? )
 ###########################################################################################

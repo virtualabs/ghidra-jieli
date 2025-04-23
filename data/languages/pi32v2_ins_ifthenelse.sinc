@@ -1,0 +1,66 @@
+##############################################
+# Conditional instruction blocks
+##############################################
+
+#
+# if (rA == #imm8) then { ... } else { ... }
+#
+:if (regA == #imm1623) { is group=7 & ins0412=0x83 & regA ; imm2427=0 & imm1623 & ifcnt & elsecnt
+[
+    # Save instructions count for then and else branches
+    ctx_then_inst_count=ifcnt+1; globalset(inst_next, ctx_then_inst_count);
+    ctx_else_inst_count=elsecnt; globalset(inst_next, ctx_else_inst_count);
+
+    in_then=1; globalset(inst_next, in_then);
+]
+{
+    if (regA != imm1623) goto <else>;
+    cres=1;
+    goto <end>;
+
+<else>
+    cres=0;
+<end>
+}
+
+#
+# if (rA != #imm8) then { ... } else { ... }
+#
+:if (regA != #imm1623) { is group=7 & ins0412=0x8B & regA ; imm2427=0 & imm1623 & ifcnt & elsecnt
+[
+    # Save instructions count for then and else branches
+    ctx_then_inst_count=ifcnt+1; globalset(inst_next, ctx_then_inst_count);
+    ctx_else_inst_count=elsecnt; globalset(inst_next, ctx_else_inst_count);
+
+    in_then=1; globalset(inst_next, in_then);
+]
+{
+    if (regA == imm1623) goto <else>;
+    cres=1;
+    goto <end>;
+
+<else>
+    cres=0;
+<end>
+}
+
+#
+# ifs (rA >= rB) then { ... } else { ... }
+#
+:ifs (regA >= eregC) { is group=7 & ins0412=0xD1 & regA ; eregC & imm1623=0 & ifcnt & elsecnt
+[
+    # Save instructions count for then and else branches
+    ctx_then_inst_count=ifcnt+1; globalset(inst_next, ctx_then_inst_count);
+    ctx_else_inst_count=elsecnt; globalset(inst_next, ctx_else_inst_count);
+
+    in_then=1; globalset(inst_next, in_then);
+]
+{
+    if (regA < eregC) goto <else>;
+    cres=1;
+    goto <end>;
+
+<else>
+    cres=0;
+<end>
+}
