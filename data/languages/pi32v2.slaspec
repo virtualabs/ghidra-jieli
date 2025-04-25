@@ -22,6 +22,7 @@ define register offset=0x100 size=4
 	[ reti rete retx rets sr4 psr cnum sr7
 	  sr8  sr9  sr10 icfg usp ssp sp pc cres];
 
+define register offset=0x0160 size=4 [ mult_addr ];	# Special internal register for dealing with multiple stores/loads
 
 ##
 # Pi32v2 Context register
@@ -32,8 +33,14 @@ define register offset=0x300 size=4 [ contextreg ];
 define context contextreg
     in_then = (0, 0)
     in_else = (1,1)
-    ctx_then_inst_count = (2,3)
-    ctx_else_inst_count = (4,5)
+    ctx_then_inst_count = (2,4)
+    ctx_else_inst_count = (5,6)
+    
+    # Used to generate registers list from bitmap
+    counter = (7,10)
+    sep = (11,11)
+    bitset = (12,12)
+    
     phase = (31,31)
 ;
 
@@ -117,6 +124,7 @@ define token instr(16)
 	ins0012 = (0,12)
 	ins0312 = (3,12)
 	ins0412 = (4,12)
+    ins0512 = (5,12)
 	ins0612 = (6,12)
 	ins0712 = (7,12)
 	ins0812 = (8,12)
@@ -142,11 +150,16 @@ define token instr(16)
 	imm0002 = (0,2)
     imm0002s = (0,2) signed
 
+    imm0003 = (0,3)
+    imm0004 = (0,4)
+
 	imm0005s = (0,5) signed
 	imm0305  = (3,5)
 	imm0305s = (3,5) signed
 
 	imm0506  = (5,6)
+
+    imm0406  = (4,6)
 	imm0406s = (4,6) signed
 
 	imm0407  = (4,7)
@@ -177,35 +190,64 @@ define token instr(16)
 
 # Used by the group=7 instructions
 define token instr2(16)
+    imm1616 = (0,0)
     imm1617 = (0,1)
+    imm1618 = (0,2)
 	imm1619 = (0,3)
-	imm1631 = (0,15)
-    imm1622 = (0, 6)
-    imm1623 = (0, 7)
-    imm1624 = (0, 8) signed
-    imm1625 = (0, 9)
+    imm1620 = (0,4)
+    imm1621 = (0,5)
+    imm1622 = (0,6)
+    imm1623 = (0,7)
+    imm1624 = (0,8)
+    imm1624s = (0, 8) signed # used for relative jumps encoded on 9 bits
+    imm1625 = (0,9)
+    imm1626 = (0, 10)
     imm1627 = (0,11)
+    imm1628 = (0,12)
+    imm1629 = (0,13)
+    imm1630 = (0,14)
+	imm1631 = (0,15)
+    imm1719 = (1,3)
+    imm1819 = (2,3)
     imm2325 = (7, 9)
     imm2425 = (8, 9)
     imm2627 = (10,11)
-    imm2531 = (9, 15)
     imm2427 = (8,11)
+
+    imm1731 = (1,15)
+    imm1831 = (2,15)
+    imm1931 = (3,15)
+    imm2031 = (4,15)
+    imm2131 = (5,15)
+    imm2231 = (6,15)
+    imm2331 = (7,15)
+    imm2431 = (8,15)
+    imm2531 = (9,15)
+    imm2631 = (10,15)
+    imm2731 = (11,15)
     imm2831 = (12,15)
+    imm2931 = (13,15)
+    imm3031 = (14,15)
+
 
     elsecnt = (12,13)
     ifcnt = (14,15)
-
 	
 	eregA = (12,15)
 	eregC = (8,11)
-    esregC = (8, 11) signed
+    esregC = (8, 11)
 	eregB = (4,7)
+
+    edregA = (13,15)
+    edregC = (9,11)
+    edregB = (5,7)
 ;
 
 
 # Even more bits for some group=7 instructions (ins0812=0x1f)
 define token instr3(16)
 	imm3247 = (0,15)
+    imm3247s = (0,15) signed
 ;
 
 #############################################################################
@@ -222,11 +264,11 @@ attach variables [ regAh ]
 attach variables [ regA regB ]
 	[ r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 ];
 
-attach variables [ sregA ]
+attach variables [ sregA esregC ]
 	[ reti rete retx rets sr4 psr cnum sr7
 	  sr8  sr9  sr10 icfg usp ssp sp   pc ];
 
-attach variables [ dregA dregB ]
+attach variables [ dregA dregB edregA edregB edregC ]
 	[ r0_r1 r2_r3 r4_r5 r6_r7 r8_r9 r10_r11 r12_r13 r14_r15 ];
 
 attach variables [ eregA eregB eregC]
@@ -271,6 +313,23 @@ regCxl: regCxle is regCxs=0 & regCxle { export regCxle; }
 regCxl: regCxlo is regCxs=1 & regCxlo { export regCxlo; }
 
 #
+# 12-bit bitmask on second 16-bit instruction (group 7)
+#
+bitmask12: imm1625 is imm1625 & imm2627=0 { export imm1625; }
+
+bitmask12: res is imm1622 & imm2325 & imm2627=1
+    [ res = ((0x80 | imm1622) << 24 ) >> imm2325; ]
+    { export res;}
+
+bitmask12: res is imm1622 & imm2325 & imm2627=2
+    [ res = ((0x80 | imm1622) << 16 ) >> imm2325; ]
+    { export res;}
+
+bitmask12: res is imm1622 & imm2325 & imm2627=3
+    [ res = ((0x80 | imm1622) << 8 ) >> imm2325; ]
+    { export res;}
+
+#
 # 9-bit jump immediate (pc-relative)
 #
 jaddr9: res is imm0812 & imm0406s
@@ -281,7 +340,7 @@ jaddr9: res is imm0812 & imm0406s
 #
 # 9-bit jump immediate (pc-relative) for 32-bits conditional jumps
 #
-jaddr9e: res is imm1624 [res = imm1624 * 2 + inst_next; ] { export *:4 res;}
+jaddr9e: res is imm1624s [res = imm1624s * 2 + inst_next; ] { export *:4 res;}
 
 #
 # 12-bit jump immediate (pc-relative)
@@ -296,6 +355,14 @@ jaddr12: res is imm0812 & imm0407 & imm0001s
 jaddr23: res is imm0005s ; imm1631
 	[ res = ((imm0005s << 17) | (imm1631 << 1)) + inst_next; ]
 	{ export *:4 res; }
+
+#
+# 32-bit jump immediate (pc-relative)
+#
+jaddr32: res is imm1631 ; imm3247s
+    [ res = ((imm3247s << 16) | imm1631) + inst_next; ]
+    { export *:4 res;}
+
 
 #############################################################################
 #
