@@ -226,7 +226,7 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 #
 :push pshretsregs is group=0 & ins0412=0x047 & ins0003>=4 & pshretsregs
 {
-    mult_addr = sp;previous author
+    mult_addr = sp;
     build pshretsregs;
     sp = mult_addr;
 }
