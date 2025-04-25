@@ -99,3 +99,11 @@
 {
 	regA = regA * regB;
 }
+
+#
+# rA = rB * imm12
+#
+:mul regA, eregA, #imm1627 is group=7 & ins0412=0x1e & regA ; eregA & imm1627
+{
+    regA = eregA * imm1627;
+}

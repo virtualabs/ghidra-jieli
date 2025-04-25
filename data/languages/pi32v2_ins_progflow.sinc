@@ -68,6 +68,14 @@
 	call jaddr23;
 }
 
+#
+# call reladdr32
+#
+:call jaddr32 is (group=7 & ins0012=0x1f80) ;  jaddr32
+{
+    call jaddr32;
+}
+
 ###########################################################################################
 # Goto (Jump)
 ###########################################################################################
@@ -77,7 +85,7 @@
 #
 :goto regA is group=0 & ins0412=0x00D & regA
 {
-	goto regA;
+	goto [regA];
 }
 
 #
@@ -156,7 +164,62 @@
 }
 
 ##
-# Unsigned conditional jumps (reg/imm10)
+# Unsigned conditional jumps (reg/imm10/pcrel9m2)
+##
+
+#
+# if (rA == imm10) goto pcrel9m2
+#
+:je regA, imm10, jaddr9e is group=7 & ins0712=0x30 & imm0406 & regA ; imm2531 & jaddr9e
+[ imm10 = (imm0406 << 7) | imm2531; ]
+{
+    if (regA == imm10)
+        goto jaddr9e;
+}
+
+
+#
+# if (rA > imm10) goto pcrel9m2
+#
+:ja regA, imm10, jaddr9e is group=7 & ins0712=0x38 & imm0406 & regA ; imm2531 & jaddr9e
+[ imm10 = (imm0406 << 7) | imm2531; ]
+{
+    if (regA > imm10)
+        goto jaddr9e;
+}
+
+#
+# if (rA >= imm10) goto pcrel9m2
+#
+:jae regA, imm10, jaddr9e is group=7 & ins0712=0x32 & imm0406 & regA ; imm2531 & jaddr9e
+[ imm10 = (imm0406 << 7) | imm2531; ]
+{
+    if (regA >= imm10)
+        goto jaddr9e;
+}
+
+#
+# if (rA < imm10) goto pcrel9m2
+#
+:jb regA, imm10, jaddr9e is group=7 & ins0712=0x33 & imm0406 & regA ; imm2531 & jaddr9e
+[ imm10 = (imm0406 << 7) | imm2531; ]
+{
+    if (regA < imm10)
+        goto jaddr9e;
+}
+
+#
+# if (rA >= imm10) goto pcrel9m2
+#
+:jbe regA, imm10, jaddr9e is group=7 & ins0712=0x39 & imm0406 & regA ; imm2531 & jaddr9e
+[ imm10 = (imm0406 << 7) | imm2531; ]
+{
+    if (regA >= imm10)
+        goto jaddr9e;
+}
+
+##
+# Unsigned conditional jumps (reg/reg/imm10)
 ##
 
 #

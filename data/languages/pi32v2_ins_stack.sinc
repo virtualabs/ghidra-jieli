@@ -4,13 +4,160 @@
 #
 ##################
 
+macro pushreg(reg) { mult_addr = mult_addr - 4; *mult_addr = reg; }
+macro popreg(reg) { reg = *mult_addr; mult_addr = mult_addr + 4;}
+
+
+#######################################
+# Registers bitmap to register list
+#######################################
+
+# Push register based on counter
+pshmapreg: r0 is counter=0 & r0 {pushreg(r0);}
+pshmapreg: r1 is counter=1 & r1 {pushreg(r1);}
+pshmapreg: r2 is counter=2 & r2 {pushreg(r2);}
+pshmapreg: r3 is counter=3 & r3 {pushreg(r3);}
+pshmapreg: r4 is counter=4 & r4 {pushreg(r4);}
+pshmapreg: r5 is counter=5 & r5 {pushreg(r5);}
+pshmapreg: r6 is counter=6 & r6 {pushreg(r6);}
+pshmapreg: r7 is counter=7 & r7 {pushreg(r7);}
+pshmapreg: r8 is counter=8 & r8 {pushreg(r8);}
+pshmapreg: r9 is counter=9 & r9 {pushreg(r9);}
+pshmapreg: r10 is counter=10 & r10 {pushreg(r10);}
+pshmapreg: r11 is counter=11 & r11 {pushreg(r11);}
+pshmapreg: r12 is counter=12 & r12 {pushreg(r12);}
+pshmapreg: r13 is counter=13 & r13 {pushreg(r13);}
+pshmapreg: r14 is counter=14 & r14 {pushreg(r14);}
+pshmapreg: r15 is counter=15 & r15 {pushreg(r15);}
+
+# Pop registers based on counter
+popmapreg: r0 is counter=0 & r0 {popreg(r0);}
+popmapreg: r1 is counter=1 & r1 {popreg(r1);}
+popmapreg: r2 is counter=2 & r2 {popreg(r2);}
+popmapreg: r3 is counter=3 & r3 {popreg(r3);}
+popmapreg: r4 is counter=4 & r4 {popreg(r4);}
+popmapreg: r5 is counter=5 & r5 {popreg(r5);}
+popmapreg: r6 is counter=6 & r6 {popreg(r6);}
+popmapreg: r7 is counter=7 & r7 {popreg(r7);}
+popmapreg: r8 is counter=8 & r8 {popreg(r8);}
+popmapreg: r9 is counter=9 & r9 {popreg(r9);}
+popmapreg: r10 is counter=10 & r10 {popreg(r10);}
+popmapreg: r11 is counter=11 & r11 {popreg(r11);}
+popmapreg: r12 is counter=12 & r12 {popreg(r12);}
+popmapreg: r13 is counter=13 & r13 {popreg(r13);}
+popmapreg: r14 is counter=14 & r14 {popreg(r14);}
+popmapreg: r15 is counter=15 & r15 {popreg(r15);}
+
+# Bit ops
+next: is epsilon [counter=counter+1;]{}
+prev: is epsilon [counter=counter-1;]{}
+mregread: is imm1631 [bitset=(imm1631 & (1 << counter))>>counter;]{}
+pshmreg: pshmapreg is pshmapreg & bitset=1 [sep=1;]{}
+pshmreg: is bitset=0 {}
+popmreg: popmapreg is popmapreg & bitset=1 [sep=1;]{}
+popmreg: is bitset=0 {} 
+msep: "," is  sep=1 & bitset=1 {}
+msep: "" is sep=0 | bitset=0 {}
+
+# Recursively generate our push registers
+pshmapregs: pshmapregs^pshmreg^msep is counter<15 & mregread & msep & pshmreg & next & pshmapregs
+    { build pshmapregs; build pshmreg; }
+pshmapregs: pshmreg is counter=15 & mregread & pshmreg {}
+pshmap: pshmapregs is pshmapregs [bitset=0; counter=0; sep=0;] {}
+
+
+# Recursively generate our pop registers
+popmapregs: popmapregs^popmreg^msep is counter<15 & mregread & msep & popmreg & next & popmapregs
+    { build popmreg; build popmapregs; }
+popmapregs: popmreg is counter=15 & mregread & popmreg {}
+popmap: popmapregs is popmapregs [bitset=0; counter=0; sep=0;] {}
+
+
+#######################################
+# Registers boundary to register list
+#######################################
+
+rlpshreg: pshmapreg is pshmapreg [sep=1;]{}
+rlpopreg: popmapreg is popmapreg [sep=1;]{}
+
+##
+# Some variants of push and pop accept a single-byte operand
+# specifying a register boundary (upper or lower). The
+# following tables are used to generate the corresponding
+# registers list and associated p-code.
+#
+# All these tables use the `counter` context register to
+# iterate over the registers, the `sep` context bit to
+# indicate when a separator is required and force the
+# `bitset` context bit to 1 in order to use the
+# `msep` table.
+#
+# - pushreglist4: push registers from rX to r4 (with X>=4)
+# - popreglist4: pop registers from r4 to rX (with X>=4)
+# - pushreglist3: push registers from r3 to rX (with X<=3)
+# - popreglist3: pop registers from rX to r3 (with X<=3)
+# - pushreglist0: push registers from rX to r0 (X>=0)
+# - popreglist0: pop registers from r0 to rX (x>=0)
+##
+
+pshrl4: msep^rlpshreg^pshrl4 is counter>4 & msep & rlpshreg & prev & pshrl4 
+    { build rlpshreg; build pshrl4; }
+pshrl4: msep^rlpshreg is counter=4 & msep & rlpshreg {}
+pushreglist4: pshrl4 is pshrl4 [sep=0; bitset=1;]{}
+
+# Pop regs from counter to r4
+poprl4: msep^rlpopreg^poprl4 is counter>4 & msep & rlpopreg & prev & poprl4 
+    {build rlpopreg; build poprl4; }
+poprl4: msep^rlpopreg is counter=4 & msep & rlpopreg {}
+popreglist4: poprl4 is poprl4 [sep=0; bitset=1; ]{}
+
+# Push regs from counter to r3
+pshrl3: pshrl3^rlpshreg^msep is counter<3 & msep & rlpshreg & next & pshrl3 
+    {build pshrl3; build rlpshreg;}
+pshrl3: rlpshreg^msep is counter=3 & msep & rlpshreg {}
+pushreglist3: pshrl3 is pshrl3 [sep=0; bitset=1;]{}
+
+# Pop regs from counter to r0
+poprl3: poprl3^rlpopreg^msep is counter<3 & msep & rlpopreg & next & poprl3 
+    {build rlpopreg; build poprl3; }
+poprl3: rlpopreg^msep is counter=3 & msep & rlpopreg {}
+popreglist3: poprl3 is poprl3 [sep=0; bitset=1; ]{}
+
+
+##
+# Some helpers (from @kagaimiq and adapted)
+##
+
+# Push rets and then reglist (rX...r4)
+pshretsregs: {rets,pushreglist4} is pushreglist4 & rets & ins0003
+[ counter=ins0003 & 0x0f; ]
+{
+    mult_addr = sp;
+    pushreg(rets);
+    build pushreglist4;
+    sp = mult_addr;
+}
+
+# Pop reglist (r4...rX) and then pc
+poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
+[counter=ins0003 & 0x0f;]
+{
+    mult_addr = sp;
+    build popreglist4;
+    popreg(pc);
+    sp = mult_addr;
+    return [pc]; 
+}
+
 #
 # pc = [sp++]
 # => pop pc
 #
 :pop pc is group=0 & ins0012=0x0400 & pc
 {
-	pop(pc);
+    mult_addr = sp;
+	popreg(pc);
+    sp = mult_addr;
 	return [pc];
 }
 
@@ -20,51 +167,114 @@
 #
 :push rets is group=0 & ins0012=0x0410 & rets
 {
-	push(rets);
+    mult_addr = sp;
+	pushreg(rets);
+    sp = mult_addr;
 }
 
 #
 # {rets, regs...} = [sp++]
 # => pop {rets, regs...}
 #
-:pop {rets, ins0003} is group=0 & ins0412=0x043 & ins0003 & rets
+:pop {rets, popreglist4} is group=0 & ins0412=0x043 & ins0003>=4 & ins0003 & popreglist4 & rets
+[ counter=ins0003 & 0x0f; ]
 {
-	pop(rets);
+    mult_addr = sp;
+    popreg(rets);
+    build popreglist4;
+    sp = mult_addr;
 }
 
 #
 # {regs...} = [sp++]
 # => pop {regs...}
 #
-:pop {ins0003} is group=0 & ins0412=0x044 & ins0003
+:pop {popreglist3} is group=0 & ins0412=0x044 & ins0003 & popreglist3
+[ counter = ins0003 & 0xf; ]
 {
-
+    mult_addr = sp;
+    build popreglist3;
+    sp = mult_addr;
 }
 
 #
 # {pc, regs...} = [sp++]
 # => pop {pc, regs...}
 #
-:pop {pc, ins0003} is group=0 & ins0412=0x045 & ins0003 & pc
+:pop poppcregs is group=0 & ins0412=0x045 & ins0003 & poppcregs
 {
-	pop(pc);
-	return [pc];
+    mult_addr = sp;
+    build poppcregs;
+    sp = mult_addr;
 }
 
 #
-# [--sp] = {rets, regs...}
-# => push {rets, regs...}
+# [--sp] = {...regs, r3}
+# => push {...regs, r3}
 #
-:push {rets, ins0003} is group=0 & ins0412=0x046 & ins0003 & rets
+:push {pushreglist3} is group=0 & ins0412=0x046 & ins0003>0 & ins0003 & pushreglist3
+[ counter = ins0003 & 0xf; ]
 {
-	push(rets);
+    mult_addr = sp;
+    build pushreglist3;
+    sp = mult_addr;
 }
 
 #
-# [--sp] = {regs...}
-# => push {regs...}
+# [--sp] = {rets, r4, ...}
+# => push {rets, r4, ...}
 #
-:push {ins0003} is group=0 & ins0412=0x047 & ins0003
+:push pshretsregs is group=0 & ins0412=0x047 & ins0003>=4 & pshretsregs
 {
-
+    mult_addr = sp;previous author
+    build pshretsregs;
+    sp = mult_addr;
 }
+
+#
+# [--sp] = {reg, ...}
+# => push {reg, ...}
+#
+:push {pshmap} is group=7 & ins0012=0x8D8 ; pshmap
+{
+    mult_addr = sp;
+    build pshmap;
+    sp = mult_addr;
+}
+
+#
+# [--sp] = {reg, ...}
+# => pop {reg, ...}
+#
+:pop {popmap} is group=7 & ins0012=0x8D4 ; popmap
+{
+    mult_addr = sp;
+    build popmap;
+    sp = mult_addr;
+}
+
+#
+# [--sp] = {rets, reg, ...}
+# => push {rets, reg, ...}
+#
+:push {rets, pshmap} is group=7 & ins0012=0x8D9 & rets ; pshmap
+{
+    mult_addr = sp;
+    pushreg(rets);
+    build pshmap;
+    sp = mult_addr;
+}
+
+#
+# [--sp] = {rets, reg, ...}
+# => push {rets, reg, ...}
+#
+:pop {pc, popmap} is group=7 & ins0012=0x8D5 & pc ; popmap
+{
+    mult_addr = sp;
+    build popmap;
+    popreg(pc);
+    sp = mult_addr;
+    return [pc];
+}
+

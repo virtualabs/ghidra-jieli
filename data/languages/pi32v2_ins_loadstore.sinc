@@ -4,6 +4,53 @@
 #
 ##################
 
+###########################################################################################
+# Load Double Word
+###########################################################################################
+
+#
+# r1_r0 = *:8 [rB + imm24]
+# => ldw r1_r0, [rB + imm24]
+#
+:ldw edregA, [eregB + imm24] is group=7 & ins0412=0xc5 & imm0003 ; edregA & eregB & imm2427 & imm1719 & imm1616=0
+[ imm24 = (imm0003<<16) | (imm2427 << 8) | (imm1719 << 1); ]
+{
+    local addr = eregB + imm24;
+    edregA = *:8 addr;
+}
+
+#
+# rA = [rB+#imm11s]
+# addldw rA, rB, #imm11s
+# 
+:ldw eregA, eregB, #imm11 is group=7 & ins0412=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=0
+[imm11 = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
+{
+    tmp = eregB + imm11;
+    eregA = *:4 tmp;
+}
+
+#
+# rA = [++rB=#imm11s]
+# addldw rA, rB, #imm11s
+# 
+:addldw eregA, eregB, #imm11 is group=7 & ins0412=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=2
+[imm11 = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
+{
+    eregB = eregB + imm11;
+    eregA = *:4 eregB;
+}
+
+#
+# rA = [++rB=rC]
+# addldw rA, rB, rC
+# 
+:addldw eregA, eregB, eregC is group=7 & ins0412=0xCD & ins0003=0xC ; eregA & eregB & eregC & imm1617=2
+{
+    eregB = eregB + eregC;
+    eregA = *:4 eregB;
+}
+
 
 ###########################################################################################
 # Load Word
@@ -109,6 +156,54 @@
 	regAl = zext(*:1 addr);
 }
 
+#
+# rA = b[rB+imm16] (u)
+# => lb.z rA, [rB + imm16]
+#
+:lb.z eregA, [eregB + imm16] is group=7 & ins0012=0xe50 ; eregA & eregB & imm1619 & imm2427
+[ imm16 = (imm2427 << 8) | imm1619; ]
+{
+	local addr:4 = eregB + imm16;
+	eregA = zext(*:1 addr);
+}
+
+###########################################################################################
+# Store Double Word
+###########################################################################################
+
+#
+# *:8 [rB + imm24] = r1_r0
+# => sdw r1_r0, [rB + imm24]
+#
+:sdw edregA, [eregB + imm24] is group=7 & ins0412=0xc5 & imm0003 ; edregA & eregB & imm2427 & imm1719 & imm1616=1
+[ imm24 = (imm0003<<16) | (imm2427 << 8) | (imm1719 << 1); ]
+{
+    local addr = eregB + imm24;
+    *:8 addr = edregA;
+}
+
+#
+# [++rB=#imm11s] = rA
+# addsdw rA, rB, #imm11s
+# 
+:addsdw eregA, eregB, #imm11 is group=7 & ins0412=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=3
+[imm11 = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
+{
+    eregB = eregB + imm11;
+    eregA = *:4 eregB;
+}
+
+#
+# [++rB=rC] = rA
+# addsdw rA, rB, rC
+# 
+:addsdw eregA, eregB, eregC is group=7 & ins0412=0xCD & ins0003=0xC ; eregA & eregB & eregC & imm1617=3
+{
+    eregB = eregB + eregC;
+    eregA = *:4 eregB;
+}
+
+
 ###########################################################################################
 # Store Word
 ###########################################################################################
@@ -142,6 +237,46 @@
 {
 	local addr:4 = regBl + simm7m4;
 	*:4 addr = regAl:4;
+}
+
+#
+# [rA + imm5m4] = imm10 (10 bits)
+#
+:sw imm1625, [eregA + offset] is group=7 & ins0512=0x52 & imm0004 ; imm1625 & imm2627=0 & eregA
+[ offset = imm0004 * 4; ]
+{
+    local addr:4 = eregA + offset;
+    *:4 addr = imm1625;
+}
+
+#
+# [rA + imm5m4] = imm32 (32 bits)
+#
+:sw v, [eregA + offset] is group=7 & ins0512=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=1 & eregA
+[ offset = imm0004 * 4; v = ( (0x80 | imm1622) << 24 ) >> imm2325; ]
+{
+    local addr:4 = eregA + offset;
+    *:4 addr = v;
+}
+
+#
+# [rA + imm5m4] = imm24 (24 bits)
+#
+:sw v, [eregA + offset] is group=7 & ins0512=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=2 & eregA
+[ offset = imm0004 * 4; v = ( (0x80 | imm1622) << 16 ) >> imm2325; ]
+{
+    local addr:4 = eregA + offset;
+    *:4 addr = v;
+}
+
+#
+# [rA + imm5m4] = imm16 (16 bits)
+#
+:sw v, [eregA + offset] is group=7 & ins0512=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=3 & eregA
+[ offset = imm0004 * 4; v = ( (0x80 | imm1622) << 8 ) >> imm2325; ]
+{
+    local addr:4 = eregA + offset;
+    *:4 addr = v;
 }
 
 ###########################################################################################
@@ -212,3 +347,5 @@
 	local addr:4 = regBl + imm0812s;
 	*:1 addr = regAl:1;
 }
+
+
