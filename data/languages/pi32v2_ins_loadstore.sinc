@@ -12,8 +12,8 @@
 # r1_r0 = *:8 [rB + imm24]
 # => ldw r1_r0, [rB + imm24]
 #
-:ldw edregA, [eregB + imm24] is group=7 & ins0412=0xc5 & imm0003 ; edregA & eregB & imm2427 & imm1719 & imm1616=0
-[ imm24 = (imm0003<<16) | (imm2427 << 8) | (imm1719 << 1); ]
+:ldw edregA, [eregB + imm24] is group=7 & ins0412=0xc5 & imm0003 ; edregA & eregB & imm2427 & imm1819 & imm1617=0
+[ imm24 = (imm0003<<16) | (imm2427 << 8) | (imm1819 << 2); ]
 {
     local addr = eregB + imm24;
     edregA = *:8 addr;
@@ -172,13 +172,13 @@
 ###########################################################################################
 
 #
-# *:8 [rB + imm24] = r1_r0
-# => sdw r1_r0, [rB + imm24]
+# *:8 [rB + imm10s] = r1_r0
+# => sdw r1_r0, [rB + imm10s]
 #
-:sdw edregA, [eregB + imm24] is group=7 & ins0412=0xc5 & imm0003 ; edregA & eregB & imm2427 & imm1719 & imm1616=1
-[ imm24 = (imm0003<<16) | (imm2427 << 8) | (imm1719 << 1); ]
+:sdw edregA, [eregB + imm10s] is group=7 & ins0412=0xc5 & ins0303=0 & imm0002s ; edregA & eregB & imm2427 & imm1819 & imm1617=2
+[ imm10s = (imm0002s<<16) | (imm2427 << 4) | (imm1819 << 2); ]
 {
-    local addr = eregB + imm24;
+    local addr = eregB + imm10s;
     *:8 addr = edregA;
 }
 
@@ -186,11 +186,11 @@
 # [++rB=#imm11s] = rA
 # addsdw rA, rB, #imm11s
 # 
-:addsdw eregA, eregB, #imm11 is group=7 & ins0412=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=3
+:addsdw eregA, [++eregB=imm11] is group=7 & ins0412=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=3
 [imm11 = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
 {
     eregB = eregB + imm11;
-    eregA = *:4 eregB;
+    *:4 eregB = eregA;
 }
 
 #
@@ -200,7 +200,7 @@
 :addsdw eregA, eregB, eregC is group=7 & ins0412=0xCD & ins0003=0xC ; eregA & eregB & eregC & imm1617=3
 {
     eregB = eregB + eregC;
-    eregA = *:4 eregB;
+    *:4 eregB = eregA;
 }
 
 
@@ -279,6 +279,16 @@
     *:4 addr = v;
 }
 
+#
+# [rA + imm11s] = rB
+#
+:sw eregA, [eregB + imm11s] is group=7 & ins0412=0xCD & ins0303=0 & imm0002s ; eregA & eregB & imm1819 & imm2427 & imm1617=1
+[imm11s = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
+{
+    addr = eregB + imm11s;
+    *:4 addr = eregA;
+}
+
 ###########################################################################################
 # Store halfword
 ###########################################################################################
@@ -312,6 +322,16 @@
 {
 	local addr:4 = regBl + simm6m2;
 	*:2 addr = regAl:2;
+}
+
+#
+# h[rB+imm9s] = rAl
+#
+:sh eregAl, [eregB + imm9s] is group=7 & ins0412=0xd5 & ins0203=0 & imm0002s ; eregAl & imm2427 & eregB & imm1719 & imm1616=1
+[ imm9s = (imm0002s << 8) | (imm2427 << 4) | (imm1719 << 1); ]
+{
+    addr:4 = eregB + imm9s;
+    *:2 addr = eregAl:2;
 }
 
 ###########################################################################################
@@ -348,4 +368,13 @@
 	*:1 addr = regAl:1;
 }
 
-
+#
+# b[rB+simm8] = rA
+# => sb rA, [rB + simm5]
+#
+:sb eregAl, [eregB + imm8] is group=7 & ins0412=0xe5 & imm0003=2 ; eregAl & imm2427 & eregB & imm1619
+[ imm8 = imm1619 | (imm2427 << 4); ]
+{
+	local addr:4 = eregB + imm8;
+	*:1 addr = eregAl:1;
+}

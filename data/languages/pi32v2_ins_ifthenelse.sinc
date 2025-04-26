@@ -171,3 +171,45 @@
     cres=0;
 <end>
 }
+
+# 
+# if (rB >= rA) then { ... } else { ... }
+#
+:if (regA >= eregC) { is group=7 & ins0412=0x91 & regA ; eregC & imm1623=0 & ifcnt & elsecnt
+[
+    # Save instructions count for then and else branches
+    ctx_then_inst_count=ifcnt+1; globalset(inst_next, ctx_then_inst_count);
+    ctx_else_inst_count=elsecnt; globalset(inst_next, ctx_else_inst_count);
+
+    in_then=1; globalset(inst_next, in_then);
+]
+{
+    if (regA < eregC) goto <else>;
+    cres=1;
+    goto <end>;
+
+<else>
+    cres=0;
+<end>
+}
+
+# 
+# if (rB >= rA) then { ... } else { ... }
+#
+:if (regA <= eregC) { is group=7 & ins0412=0xC9 & regA ; eregC & imm1623=0 & ifcnt & elsecnt
+[
+    # Save instructions count for then and else branches
+    ctx_then_inst_count=ifcnt+1; globalset(inst_next, ctx_then_inst_count);
+    ctx_else_inst_count=elsecnt; globalset(inst_next, ctx_else_inst_count);
+
+    in_then=1; globalset(inst_next, in_then);
+]
+{
+    if (regA > eregC) goto <else>;
+    cres=1;
+    goto <end>;
+
+<else>
+    cres=0;
+<end>
+}

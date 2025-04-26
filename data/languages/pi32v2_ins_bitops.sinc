@@ -65,3 +65,16 @@
     local addr:4 = eregA + imm8;
     *:4 addr = addr & ~(1 << eregC);
 }
+
+
+#################################
+# Bit count
+#################################
+
+#
+# rA = clz(rB)
+#
+:clz eregA, eregC is group=7 & ins0012=0x180 ; eregA & eregC & imm1623=0
+{
+    eregA = lzcount(eregC);
+}

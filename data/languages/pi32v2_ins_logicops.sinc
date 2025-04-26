@@ -30,6 +30,22 @@
 	regAl = regAl ^ regBl;
 }
 
+#
+# rA = rB ^ bitmask (12-bits)
+#
+:xor regA, eregA, #bitmask12 is group=7 & ins0412=0x15 & regA ; eregA & bitmask12
+{
+    regA = eregA ^ bitmask12;
+}
+
+#
+# rA = rB ^ rC
+#
+:xor eregA, eregB, eregC is group=7 & ins0012=0x190 ; eregA & eregB & eregC & imm1619=1
+{
+    eregA = eregB ^ eregC;
+}
+
 ###########################################################################################
 # NOT (one's complement)
 ###########################################################################################

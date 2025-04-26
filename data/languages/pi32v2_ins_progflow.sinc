@@ -219,6 +219,29 @@
 }
 
 ##
+# Unsigned conditional jumps (reg/imm16/pcrel12m2)
+##
+
+#
+# if (rA != #imm10s) goto pcrel16m2
+#
+:jne eregA, #imm1627, jaddr16e is group=7 & ins0012=0x1f01 ; eregA & imm1627 ; jaddr16e
+{
+    if (eregA != imm1627)
+        goto jaddr16e;
+}
+
+#
+# if (rA != #imm10s) goto pcrel9m2
+#
+:jne regA, #imm10s is group=7 & ins0712=0x31 & imm0406s & regA ; imm2531 & jaddr9e
+[ imm10s = (imm0406s << 7) | imm2531; ]
+{
+    if (regA != imm10s)
+        goto jaddr9e;
+}
+
+##
 # Unsigned conditional jumps (reg/reg/imm10)
 ##
 
@@ -261,6 +284,17 @@
     if (eregA <= regA)
         goto jaddr9e;
 }
+
+# Jump to jaddr9e if unsigned value of rB <= rA
+# if (rB <= rA) goto reladdr9
+# => jbe rB, rA, reladdr9
+#
+:je eregA, regA, jaddr9e is group=7 & ins0412=0x80 & regA; eregA & jaddr9e
+{
+    if (eregA != regA)
+        goto jaddr9e;
+}
+
 
 ##
 # Signed conditional jumps (register/imm10)
