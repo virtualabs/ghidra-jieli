@@ -2,6 +2,8 @@
 #
 # Program Flow Control
 #
+# (These instructions cannot/shouldnot be parallelized)
+#
 ##################
 
 ###########################################################################################
@@ -71,7 +73,7 @@
 #
 # call reladdr32
 #
-:call jaddr32 is (group=7 & ins0012=0x1f80) ;  jaddr32
+:call jaddr32 is group=7 & ins0012=0x1f80 ; jaddr32
 {
     call jaddr32;
 }
@@ -157,6 +159,7 @@
 # if (rA != #imm7) goto reladdr9
 # => jne rA, #imm7, reladdr9
 #
+
 :jne regA, #imm2531, jaddr9e is group=7 & ins0812=0x18 & ins0407=8 & regA ; imm2531 & jaddr9e
 {
 	if (regA != imm2531)
@@ -170,6 +173,7 @@
 #
 # if (rA == imm10) goto pcrel9m2
 #
+
 :je regA, imm10, jaddr9e is group=7 & ins0712=0x30 & imm0406 & regA ; imm2531 & jaddr9e
 [ imm10 = (imm0406 << 7) | imm2531; ]
 {
@@ -181,6 +185,8 @@
 #
 # if (rA > imm10) goto pcrel9m2
 #
+
+
 :ja regA, imm10, jaddr9e is group=7 & ins0712=0x38 & imm0406 & regA ; imm2531 & jaddr9e
 [ imm10 = (imm0406 << 7) | imm2531; ]
 {
@@ -191,6 +197,8 @@
 #
 # if (rA >= imm10) goto pcrel9m2
 #
+
+
 :jae regA, imm10, jaddr9e is group=7 & ins0712=0x32 & imm0406 & regA ; imm2531 & jaddr9e
 [ imm10 = (imm0406 << 7) | imm2531; ]
 {
@@ -201,6 +209,8 @@
 #
 # if (rA < imm10) goto pcrel9m2
 #
+
+
 :jb regA, imm10, jaddr9e is group=7 & ins0712=0x33 & imm0406 & regA ; imm2531 & jaddr9e
 [ imm10 = (imm0406 << 7) | imm2531; ]
 {
@@ -219,17 +229,8 @@
 }
 
 ##
-# Unsigned conditional jumps (reg/imm16/pcrel12m2)
+# Unsigned conditional jumps (reg/imm10/pcrel9m2)
 ##
-
-#
-# if (rA != #imm10s) goto pcrel16m2
-#
-:jne eregA, #imm1627, jaddr16e is group=7 & ins0012=0x1f01 ; eregA & imm1627 ; jaddr16e
-{
-    if (eregA != imm1627)
-        goto jaddr16e;
-}
 
 #
 # if (rA != #imm10s) goto pcrel9m2
@@ -286,15 +287,24 @@
 }
 
 # Jump to jaddr9e if unsigned value of rB <= rA
-# if (rB <= rA) goto reladdr9
-# => jbe rB, rA, reladdr9
+# if (rB != rA) goto reladdr9
+# => jne rB, rA, reladdr9
 #
-:je eregA, regA, jaddr9e is group=7 & ins0412=0x80 & regA; eregA & jaddr9e
+:jne eregA, regA, jaddr9e is group=7 & ins0412=0x88 & regA; eregA & jaddr9e
 {
     if (eregA != regA)
         goto jaddr9e;
 }
 
+# Jump to jaddr9e if unsigned value of rB <= rA
+# if (rB = rA) goto reladdr9
+# => je rB, rA, reladdr9
+#
+:je eregA, regA, jaddr9e is group=7 & ins0412=0x80 & regA; eregA & jaddr9e
+{
+    if (eregA == regA)
+        goto jaddr9e;
+}
 
 ##
 # Signed conditional jumps (register/imm10)
@@ -340,6 +350,126 @@
     if (regA s>= imm10)
         goto jaddr9e;
 }
+
+##
+# Unsigned conditional jumps (register/imm12/pcrel16sm2)
+##
+
+#
+# if (rA == #imm12) goto pcrel16sm2
+#
+:je eregA, #imm1627, jaddr16e is group=7 & ins0012=0x1f00 ; eregA & imm1627 ; jaddr16e
+{
+    if (eregA == imm1627)
+        goto jaddr16e;
+}
+
+#
+# if (rA != #imm12) goto pcrel16sm2
+#
+:jne eregA, #imm1627, jaddr16e is group=7 & ins0012=0x1f01 ; eregA & imm1627 ; jaddr16e
+{
+    if (eregA != imm1627)
+        goto jaddr16e;
+}
+
+#
+# if (rA >= #imm12) goto pcrel16sm2
+#
+:jae eregA, #imm1627, jaddr16e is group=7 & ins0012=0x1f02 ; eregA & imm1627 ; jaddr16e
+{
+    if (eregA >= imm1627)
+        goto jaddr16e;
+}
+
+#
+# if (rA < #imm12) goto pcrel16sm2
+#
+:jb eregA, #imm1627, jaddr16e is group=7 & ins0012=0x1f03 ; eregA & imm1627 ; jaddr16e
+{
+    if (eregA < imm1627)
+        goto jaddr16e;
+}
+
+#
+# if (rA > #imm12) goto pcrel16sm2
+#
+:ja eregA, #imm1627, jaddr16e is group=7 & ins0012=0x1f08 ; eregA & imm1627 ; jaddr16e
+{
+    if (eregA > imm1627)
+        goto jaddr16e;
+}
+
+#
+# if (rA <= #imm12) goto pcrel16sm2
+#
+:jbe eregA, #imm1627, jaddr16e is group=7 & ins0012=0x1f09 ; eregA & imm1627 ; jaddr16e
+{
+    if (eregA <= imm1627)
+        goto jaddr16e;
+}
+
+##
+# Unsigned conditional jumps (register/packedimm32/pcrel16sm2)
+##
+
+#
+# if (rA == #packedimm32) goto pcrel16sm2
+#
+:je eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f20 ; eregA & packedimm12 ; jaddr16e
+{
+    if (eregA == packedimm12)
+        goto jaddr16e;
+}
+
+#
+# if (rA != #packedimm32) goto pcrel16sm2
+#
+:jne eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f21 ; eregA & packedimm12 ; jaddr16e
+{
+    if (eregA != packedimm12)
+        goto jaddr16e;
+}
+
+#
+# if (rA >= #packedimm32) goto pcrel16sm2
+#
+:jae eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f22 ; eregA & packedimm12 ; jaddr16e
+{
+    if (eregA >= packedimm12)
+        goto jaddr16e;
+}
+
+#
+# if (rA < #packedimm32) goto packedimm12
+#
+:jb eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f23 ; eregA & packedimm12 ; jaddr16e
+{
+    if (eregA < packedimm12)
+        goto jaddr16e;
+}
+
+#
+# if (rA > #packedimm32) goto pcrel16sm2
+#
+:ja eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f28 ; eregA & packedimm12 ; jaddr16e
+{
+    if (eregA > packedimm12)
+        goto jaddr16e;
+}
+
+#
+# if (rA <= #packedimm32) goto pcrel16sm2
+#
+:jbe eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f29 ; eregA & packedimm12 ; jaddr16e
+{
+    #if (eregA < packedimm12)
+    #    goto jaddr16e;
+}
+
+#:oops is group=3 & ins0412=0x1f2 & ins0003=0; eregA ; jaddr16e
+#{
+#}
 
 ###########################################################################################
 # Code repeat     ( Impossible to implement? )

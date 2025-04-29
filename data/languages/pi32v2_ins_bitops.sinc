@@ -21,7 +21,7 @@
 # [rA + imm8] |= (1 << rB)
 # => bitset [rA + imm8], rB
 #
-:bitset "["eregA + imm8"]", eregC is group=7 & ins0012=0x866 ; eregA & eregC & imm1617=0 & imm1623
+:bitset "["eregA + imm8"]", eregC is group=7 & ins0011=0x866 ; eregA & eregC & imm1617=0 & imm1623
 [imm8 = (imm1623 & 0xFC);]
 {
     local addr:4 = eregA + imm8;
@@ -59,7 +59,7 @@
 # [rA + imm8] |= (1 << rB)
 # => bitclr [rA + imm8], rB
 #
-:bitclr "["eregA + imm8"]", eregC is group=7 & ins0012=0x866 ; eregA & eregC & imm1617=3 & imm1623
+:bitclr "["eregA + imm8"]", eregC is group=7 & ins0011=0x866 ; eregA & eregC & imm1617=3 & imm1623
 [imm8 = (imm1623 & 0xFC);]
 {
     local addr:4 = eregA + imm8;
@@ -74,7 +74,7 @@
 #
 # rA = clz(rB)
 #
-:clz eregA, eregC is group=7 & ins0012=0x180 ; eregA & eregC & imm1623=0
+:clz eregA, eregC is group=7 & ins0011=0x180 ; eregA & eregC & imm1623=0
 {
     eregA = lzcount(eregC);
 }

@@ -235,7 +235,7 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 # [--sp] = {reg, ...}
 # => push {reg, ...}
 #
-:push {pshmap} is group=7 & ins0012=0x8D8 ; pshmap
+:push {pshmap} is group=7 & ins0011=0x8D8 ; pshmap
 {
     mult_addr = sp;
     build pshmap;
@@ -246,7 +246,7 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 # [--sp] = {reg, ...}
 # => pop {reg, ...}
 #
-:pop {popmap} is group=7 & ins0012=0x8D4 ; popmap
+:pop {popmap} is group=7 & ins0011=0x8D4 ; popmap
 {
     mult_addr = sp;
     build popmap;
@@ -257,7 +257,7 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 # [--sp] = {rets, reg, ...}
 # => push {rets, reg, ...}
 #
-:push {rets, pshmap} is group=7 & ins0012=0x8D9 & rets ; pshmap
+:push {rets, pshmap} is group=7 & ins0011=0x8D9 & rets ; pshmap
 {
     mult_addr = sp;
     pushreg(rets);
@@ -269,7 +269,7 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 # [--sp] = {rets, reg, ...}
 # => push {rets, reg, ...}
 #
-:pop {pc, popmap} is group=7 & ins0012=0x8D5 & pc ; popmap
+:pop {pc, popmap} is group=7 & ins0011=0x8D5 & pc ; popmap
 {
     mult_addr = sp;
     build popmap;
@@ -277,4 +277,25 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
     sp = mult_addr;
     return [pc];
 }
+
+#
+# [sp+imm5] = rA
+# => sw rA, [sp+imm5]
+#
+:sw regA, [sp+imm5] is group=1 & ins0407=0x8 & regA & imm0812 & sp
+[ imm5 = imm0812 * 4; ]
+{
+    *:4 sp = regA;
+}
+
+#
+# rA = [sp+#imm5]
+# => lw rA, [sp+imm5]
+#
+:lw regA, [sp+imm5] is group=1 & ins0407=0 & regA & imm0812 & sp
+[ imm5 = imm0812 * 4; ]
+{
+    regA = *:4 sp;
+}
+
 

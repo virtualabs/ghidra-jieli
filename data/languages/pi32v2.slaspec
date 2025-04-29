@@ -31,83 +31,91 @@ define register offset=0x0160 size=4 [ mult_addr ];	# Special internal register 
 define register offset=0x300 size=4 [ contextreg ];
 
 define context contextreg
-    in_then = (0, 0)
-    in_else = (1,1)
-    ctx_then_inst_count = (2,4)
-    ctx_else_inst_count = (5,6)
+    # Used while parsing any if...then...else structure
+    ifblock = (0,0)
+    closebracket = (1,1)
+    thenbranch = (2,4)
+    elsebranch = (5,6)
     
     # Used to generate registers list from bitmap
     counter = (7,10)
     sep = (11,11)
     bitset = (12,12)
-    
+
+    # Group preprocessing
+    group = (13, 15)
+
+    parallel_phase = (29,29)
+    parallel = (30,30)
     phase = (31,31)
 ;
+
 
 ##
 # Process instructions that may be part of an if...then...else structure
 ##
 
-:^instruction is phase=0 & in_then=1 & ctx_then_inst_count>0 & instruction
-    [
-        ctx_then_inst_count=ctx_then_inst_count-1;
-        globalset(inst_next, ctx_then_inst_count);
-        phase=1;
-    ]
-    {
-        # Skip instruction if condition is not met (we are in the `then` branch)
-        if (cres != 1) goto inst_next;
-        build instruction;
-    }
+#:^instruction is phase=0 & in_then=1 & ctx_then_inst_count>0 & instruction
+#    [
+#        ctx_then_inst_count=ctx_then_inst_count-1;
+#        globalset(inst_next, ctx_then_inst_count);
+#        phase=1;
+#    ]
+#    {
+#        # Skip instruction if condition is not met (we are in the `then` branch)
+#        if (cres != 1) goto inst_next;
+#        build instruction;
+#    }
+#
+## No more instruction in `then` branch and no `else` branch.
+#:"}" instruction is phase=0 & in_then=1 & ctx_then_inst_count=0 & ctx_else_inst_count=0 & instruction
+#    [
+#        in_then=0; globalset(inst_next, in_then);
+#        phase=1;
+#    ]
+#    {
+#        build instruction;
+#    }
+#
+## No more instructions in `then` branch, but some in the `else` branch
+## We switch from `in_then` to `in_else`
+#:"} else {" instruction is phase=0 & in_then=1 & ctx_then_inst_count=0 & ctx_else_inst_count>0 & instruction
+#    [
+#        in_then=0; globalset(inst_next, in_then);
+#        in_else=1; globalset(inst_next, in_else);
+#        ctx_else_inst_count=ctx_else_inst_count-1;
+#        phase=1;
+#    ]
+#    {
+#        # Skip instruction if condition is met (we are in the `else` branch)
+#        if (cres == 1) goto inst_next;
+#        build instruction;
+#    }
+#
+## Processing `else` branch instruction
+#:^instruction is phase=0 & in_else=1 & ctx_else_inst_count>0 & instruction
+#    [
+#        ctx_else_inst_count=ctx_else_inst_count-1;
+#        globalset(inst_next, ctx_else_inst_count);
+#        phase=1;
+#    ]
+#    {
+#        # Skip instruction if condition is met (we are in the `else` branch)
+#        if (cres == 1) goto inst_next;
+#        build instruction;
+#    }
+#
+## No more instruction in `else` branch, exiting conditional execution
+## We set `in_else` to 0.
+#:"}" instruction is phase=0 & in_else=1 & ctx_else_inst_count=0 & instruction
+#    [
+#        in_else=0; globalset(inst_next, in_else);
+#        phase=1;        
+#    ]
+#    {
+#        build instruction;
+#    }
 
-# No more instruction in `then` branch and no `else` branch.
-:"}" instruction is phase=0 & in_then=1 & ctx_then_inst_count=0 & ctx_else_inst_count=0 & instruction
-    [
-        in_then=0; globalset(inst_next, in_then);
-        phase=1;
-    ]
-    {
-        build instruction;
-    }
-
-# No more instructions in `then` branch, but some in the `else` branch
-# We switch from `in_then` to `in_else`
-:"} else {" instruction is phase=0 & in_then=1 & ctx_then_inst_count=0 & ctx_else_inst_count>0 & instruction
-    [
-        in_then=0; globalset(inst_next, in_then);
-        in_else=1; globalset(inst_next, in_else);
-        ctx_else_inst_count=ctx_else_inst_count-1;
-        phase=1;
-    ]
-    {
-        # Skip instruction if condition is met (we are in the `else` branch)
-        if (cres == 1) goto inst_next;
-        build instruction;
-    }
-
-# Processing `else` branch instruction
-:^instruction is phase=0 & in_else=1 & ctx_else_inst_count>0 & instruction
-    [
-        ctx_else_inst_count=ctx_else_inst_count-1;
-        globalset(inst_next, ctx_else_inst_count);
-        phase=1;
-    ]
-    {
-        # Skip instruction if condition is met (we are in the `else` branch)
-        if (cres == 1) goto inst_next;
-        build instruction;
-    }
-
-# No more instruction in `else` branch, exiting conditional execution
-# We set `in_else` to 0.
-:"}" instruction is phase=0 & in_else=1 & ctx_else_inst_count=0 & instruction
-    [
-        in_else=0; globalset(inst_next, in_else);
-        phase=1;        
-    ]
-    {
-        build instruction;
-    }
 
 #############################################################################
 #
@@ -116,11 +124,12 @@ define context contextreg
 
 # Base word
 define token instr(16)
-	group = (13,15)
+	prefix = (13,15)
 
 	#
-	# instruction type fields
+	# instruction type fields (group != 7)
 	#
+
 	ins0012 = (0,12)
 	ins0312 = (3,12)
 	ins0412 = (4,12)
@@ -142,6 +151,19 @@ define token instr(16)
 	ins0203 = (2,3)
 	ins0303 = (3,3)
     ins0305 = (3,5)
+
+    #
+    # Extra instruction type fields for group 7
+    #
+    ins1112 = (11,12)
+    ins0011 = (0,11)
+	ins0311 = (3,11)
+	ins0411 = (4,11)
+    ins0511 = (5,11)
+	ins0611 = (6,11)
+	ins0711 = (7,11)
+	ins0811 = (8,11)
+	ins0911 = (9,11)
 
 	#
 	# immediate fields
@@ -254,6 +276,7 @@ define token instr3(16)
     imm3247s = (0,15) signed
 ;
 
+
 #############################################################################
 #
 # Variables
@@ -319,19 +342,19 @@ regCxl: regCxlo is regCxs=1 & regCxlo { export regCxlo; }
 #
 # 12-bit bitmask on second 16-bit instruction (group 7)
 #
-bitmask12: imm1625 is imm1625 & imm2627=0 { export imm1625; }
+packedimm12: imm1625 is imm1625 & imm2627=0 { imm:4 = imm1625; export imm; }
 
-bitmask12: res is imm1622 & imm2325 & imm2627=1
+packedimm12: res is imm1622 & imm2325 & imm2627=1
     [ res = ((0x80 | imm1622) << 24 ) >> imm2325; ]
-    { export res;}
+    { imm:4 = res; export imm;}
 
-bitmask12: res is imm1622 & imm2325 & imm2627=2
+packedimm12: res is imm1622 & imm2325 & imm2627=2
     [ res = ((0x80 | imm1622) << 16 ) >> imm2325; ]
-    { export res;}
+    { imm:4 = res; export imm;}
 
-bitmask12: res is imm1622 & imm2325 & imm2627=3
+packedimm12: res is imm1622 & imm2325 & imm2627=3
     [ res = ((0x80 | imm1622) << 8 ) >> imm2325; ]
-    { export res;}
+    { imm:4 = res; export imm;}
 
 #
 # 9-bit jump immediate (pc-relative)
@@ -373,6 +396,134 @@ jaddr23: res is imm0005s ; imm1631
 jaddr32: res is imm1631 ; imm3247s
     [ res = ((imm3247s << 16) | imm1631) + inst_next; ]
     { export *:4 res;}
+
+######################################################
+# Parallel execution
+#
+# Instructions with prefix=6 are basic group 0 instructions
+# that are parallelized, so we set the group to 0 and 
+# we parse the instruction accordingly.
+#
+# Instructions with prefix=7 are part of the extended set
+# and only instructions with bit 12 set and bit 11 clear
+# seem to support a parallelized version.
+#
+# The following lines define the `parainst` table that
+# is used to take care of the order of execution of such
+# parallelized instructions.
+#
+######################################################
+
+# For prefixes below 6, no parallelization.
+parainst:^instruction is parallel_phase=0 & prefix<6 & prefix & instruction
+[parallel_phase=1; group=prefix; parallel=0; ]
+{
+    build instruction;
+}
+
+# If instruction prefix is 6, then it is parallelized.
+# Next instruction is executed first, then this one.
+parainst:^instruction is parallel_phase=0 & prefix=6 & instruction
+[   
+    parallel_phase=1;
+    parallel=1;
+    group=0; globalset(inst_next, group);
+]
+{
+    delayslot(1);
+    build instruction;
+}
+
+# If instruction prefix is 7, then it is parallelized only
+# when bit 12 is set and bit 11 not set. Instructions defined for group 7 must
+# not use this bit for instruction matching.
+parainst:^instruction is parallel_phase=0 & prefix=7 & ins1112=0b10 & instruction
+[
+    parallel=1;
+    parallel_phase=1;
+    group=7; globalset(inst_next, group);
+]
+{
+    delayslot(1);
+    build instruction;
+}
+
+# If instruction prefix is 7 and bit 12 is not set, we simply
+# execute this instruction.
+parainst:^instruction is parallel_phase=0 & prefix=7 & ins1112!=0b10 & instruction
+[ parallel=0; parallel_phase=1; group=7; globalset(inst_next, group); ]
+{
+    build instruction;
+}
+
+######################################################
+# Conditional blocks
+#
+# The Pi32v2 architecture provides specific instructions
+# to test a specific condition and execute a block composed
+# of at most 4 instructions if this condition is met, or
+# another block of at most 3 instructions if it is not.
+#
+# The following lines specify the `cdtinst` table that
+# deals with these conditional blocks using our context
+# register `ifblock`, `closebracket`, `thenbranch` and
+# `elsebranch` bits.
+######################################################
+
+theninst:^parainst is parainst
+[ thenbranch=thenbranch-1; globalset(inst_next, thenbranch); ]
+{
+    if (cres != 1) goto inst_next;
+        build parainst;
+}
+
+elseinst:^parainst is parainst
+[ elsebranch=elsebranch-1; globalset(inst_next, elsebranch); ]
+{
+    if (cres==1) goto inst_next;
+    build parainst;
+}
+
+# Processing `then` instructions while we have more than 1 inst.
+cdtinst:^theninst is thenbranch>1 & theninst {}
+
+# Last instruction in the `then` branch, set `closebracket` to
+# force the next instruction to include a closing bracket (cap'n obvious).
+# Call to theninst will decrement the `then` counter to 0.
+# 
+# (but we are still in an if block)
+cdtinst:^theninst is thenbranch=1 & theninst
+    [ closebracket=1; globalset(inst_next, closebracket); ]{}
+
+## We are out of the `then` branch and we don't have any `else`
+## branch, let's insert a bracket and get back to normal by
+## exiting our if block.
+cdtinst:^"} " parainst is thenbranch=0 & elsebranch=0 & closebracket=1 & parainst
+    [
+        closebracket=0; globalset(inst_next, closebracket);
+        ifblock=0; globalset(inst_next, ifblock);
+    ]{}
+
+# Otherwise, we are done with our `then` branch and switch to our
+# `else` branch.
+cdtinst:^"} else { " elseinst is thenbranch=0 & elsebranch>1 & elseinst & closebracket=1
+    [ closebracket=0; globalset(inst_next, closebracket); ]{}
+
+# Special case: else branch only has a single instruction (keep closebracket to 1)
+cdtinst:^"} else { " elseinst is thenbranch=0 & elsebranch=1 & elseinst & closebracket=1 {}
+
+# Other instructions in else branch
+cdtinst:^elseinst is thenbranch=0 & elsebranch>1 & closebracket=0 & elseinst {}
+
+# Last instruction of our `else` branch forces a close bracket for the next one
+cdtinst:^elseinst is thenbranch=0 & elsebranch=1 & elseinst & closebracket=0
+    [closebracket=1; globalset(inst_next, closebracket); ]{}
+
+# Conditional instruction
+:^cdtinst is phase=0 & ifblock=1 & cdtinst [phase=1;]{}
+
+# Default case, we are not processing a conditional instruction.
+:^parainst is parainst & phase=0 & ifblock=0 [phase=1;]{}
 
 
 #############################################################################

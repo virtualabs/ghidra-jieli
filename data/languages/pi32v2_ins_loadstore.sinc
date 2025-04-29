@@ -12,7 +12,7 @@
 # r1_r0 = *:8 [rB + imm24]
 # => ldw r1_r0, [rB + imm24]
 #
-:ldw edregA, [eregB + imm24] is group=7 & ins0412=0xc5 & imm0003 ; edregA & eregB & imm2427 & imm1819 & imm1617=0
+:ldw edregA, [eregB + imm24] is group=7 & ins0411=0xc5 & imm0003 ; edregA & eregB & imm2427 & imm1819 & imm1617=0
 [ imm24 = (imm0003<<16) | (imm2427 << 8) | (imm1819 << 2); ]
 {
     local addr = eregB + imm24;
@@ -23,7 +23,7 @@
 # rA = [rB+#imm11s]
 # addldw rA, rB, #imm11s
 # 
-:ldw eregA, eregB, #imm11 is group=7 & ins0412=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=0
+:ldw eregA, eregB, #imm11 is group=7 & ins0411=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=0
 [imm11 = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
 {
     tmp = eregB + imm11;
@@ -34,7 +34,7 @@
 # rA = [++rB=#imm11s]
 # addldw rA, rB, #imm11s
 # 
-:addldw eregA, eregB, #imm11 is group=7 & ins0412=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=2
+:addldw eregA, eregB, #imm11 is group=7 & ins0411=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=2
 [imm11 = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
 {
     eregB = eregB + imm11;
@@ -45,11 +45,15 @@
 # rA = [++rB=rC]
 # addldw rA, rB, rC
 # 
-:addldw eregA, eregB, eregC is group=7 & ins0412=0xCD & ins0003=0xC ; eregA & eregB & eregC & imm1617=2
+:addldw eregA, eregB, eregC is group=7 & ins0411=0xCD & ins0003=0xC ; eregA & eregB & eregC & imm1617=2
 {
     eregB = eregB + eregC;
     eregA = *:4 eregB;
 }
+
+# Load double word into register
+# rA = [rB+]
+#
 
 
 ###########################################################################################
@@ -87,6 +91,24 @@
 	regAl = *:4 addr;
 }
 
+#
+# rA = [rB+rC]
+#
+:lw eregA, [eregB+eregC] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1619=2
+{
+    addr:4 = eregB + eregC;
+    eregA = *:4 addr;
+}
+
+#
+# rA = [rB+rC<<2]
+#
+:lw eregA, [eregB+eregC] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1619=0xa
+{
+    addr:4 = eregB + eregC<<2;
+    eregA = *:4 addr;
+}
+
 ###########################################################################################
 # Load Halfword (zero extend)
 ###########################################################################################
@@ -120,6 +142,46 @@
 {
 	local addr:4 = regBl + simm6m2;
 	regAl = zext(*:2 addr);
+}
+
+#
+# rA = h[rB+rC] (u)
+# => lh.z rA, [rB + rC]
+#
+:lh.z eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=0
+{
+	local addr:4 = eregB + eregC;
+	eregA = zext(*:2 addr);
+}
+
+#
+# rA = h[rB+rC] (s)
+# => lh.z rA, [rB + rC]
+#
+:lh.z eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=2
+{
+	local addr:4 = eregB + eregC;
+	eregA = sext(*:2 addr);
+}
+
+#
+# rA = h[rB+rC<<1] (u)
+# => lh.z rA, [rB + rC<<1]
+#
+:lh.z eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=8
+{
+	local addr:4 = eregB + eregC;
+	eregA = zext(*:2 addr);
+}
+
+#
+# rA = h[rB+rC<<1] (s)
+# => lh.z rA, [rB + rC<<1]
+#
+:lh.z eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=0xa
+{
+	local addr:4 = eregB + eregC;
+	eregA = sext(*:2 addr);
 }
 
 ###########################################################################################
@@ -160,11 +222,31 @@
 # rA = b[rB+imm16] (u)
 # => lb.z rA, [rB + imm16]
 #
-:lb.z eregA, [eregB + imm16] is group=7 & ins0012=0xe50 ; eregA & eregB & imm1619 & imm2427
+:lb.z eregA, [eregB + imm16] is group=7 & ins0011=0xe50 ; eregA & eregB & imm1619 & imm2427
 [ imm16 = (imm2427 << 8) | imm1619; ]
 {
 	local addr:4 = eregB + imm16;
 	eregA = zext(*:1 addr);
+}
+
+#
+# rA = b[rB+rC] (u)
+# => lb.z rA, [rB + rC]
+#
+:lb.z eregA, [eregB + eregC] is group=7 & ins0011=0xed8 ; eregA & eregB & eregC & imm1619=0
+{
+	local addr:4 = eregB + eregC;
+	eregA = zext(*:1 addr);
+}
+
+#
+# rA = b[rB+rC] (s)
+# => lb.z rA, [rB + rC]
+#
+:lb.z eregA, [eregB + eregC] is group=7 & ins0011=0xed8 ; eregA & eregB & eregC & imm1619=2
+{
+	local addr:4 = eregB + eregC;
+	eregA = sext(*:1 addr);
 }
 
 ###########################################################################################
@@ -175,7 +257,7 @@
 # *:8 [rB + imm10s] = r1_r0
 # => sdw r1_r0, [rB + imm10s]
 #
-:sdw edregA, [eregB + imm10s] is group=7 & ins0412=0xc5 & ins0303=0 & imm0002s ; edregA & eregB & imm2427 & imm1819 & imm1617=2
+:sdw edregA, [eregB + imm10s] is group=7 & ins0411=0xc5 & ins0303=0 & imm0002s ; edregA & eregB & imm2427 & imm1819 & imm1617=1
 [ imm10s = (imm0002s<<16) | (imm2427 << 4) | (imm1819 << 2); ]
 {
     local addr = eregB + imm10s;
@@ -186,7 +268,7 @@
 # [++rB=#imm11s] = rA
 # addsdw rA, rB, #imm11s
 # 
-:addsdw eregA, [++eregB=imm11] is group=7 & ins0412=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=3
+:addsdw eregA, [++eregB=imm11] is group=7 & ins0411=0xCD & imm0002s & ins0303=0 ; eregA & eregB & imm2427 & imm1819 & imm1617=3
 [imm11 = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
 {
     eregB = eregB + imm11;
@@ -197,7 +279,7 @@
 # [++rB=rC] = rA
 # addsdw rA, rB, rC
 # 
-:addsdw eregA, eregB, eregC is group=7 & ins0412=0xCD & ins0003=0xC ; eregA & eregB & eregC & imm1617=3
+:addsdw eregA, eregB, eregC is group=7 & ins0411=0xCD & ins0003=0xC ; eregA & eregB & eregC & imm1617=3
 {
     eregB = eregB + eregC;
     *:4 eregB = eregA;
@@ -242,7 +324,7 @@
 #
 # [rA + imm5m4] = imm10 (10 bits)
 #
-:sw imm1625, [eregA + offset] is group=7 & ins0512=0x52 & imm0004 ; imm1625 & imm2627=0 & eregA
+:sw imm1625, [eregA + offset] is group=7 & ins0511=0x52 & imm0004 ; imm1625 & imm2627=0 & eregA
 [ offset = imm0004 * 4; ]
 {
     local addr:4 = eregA + offset;
@@ -252,7 +334,7 @@
 #
 # [rA + imm5m4] = imm32 (32 bits)
 #
-:sw v, [eregA + offset] is group=7 & ins0512=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=1 & eregA
+:sw v, [eregA + offset] is group=7 & ins0511=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=1 & eregA
 [ offset = imm0004 * 4; v = ( (0x80 | imm1622) << 24 ) >> imm2325; ]
 {
     local addr:4 = eregA + offset;
@@ -262,7 +344,7 @@
 #
 # [rA + imm5m4] = imm24 (24 bits)
 #
-:sw v, [eregA + offset] is group=7 & ins0512=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=2 & eregA
+:sw v, [eregA + offset] is group=7 & ins0511=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=2 & eregA
 [ offset = imm0004 * 4; v = ( (0x80 | imm1622) << 16 ) >> imm2325; ]
 {
     local addr:4 = eregA + offset;
@@ -272,7 +354,7 @@
 #
 # [rA + imm5m4] = imm16 (16 bits)
 #
-:sw v, [eregA + offset] is group=7 & ins0512=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=3 & eregA
+:sw v, [eregA + offset] is group=7 & ins0511=0x52 & imm0004 ; imm1622 & imm2325 & imm2627=3 & eregA
 [ offset = imm0004 * 4; v = ( (0x80 | imm1622) << 8 ) >> imm2325; ]
 {
     local addr:4 = eregA + offset;
@@ -282,10 +364,28 @@
 #
 # [rA + imm11s] = rB
 #
-:sw eregA, [eregB + imm11s] is group=7 & ins0412=0xCD & ins0303=0 & imm0002s ; eregA & eregB & imm1819 & imm2427 & imm1617=1
+:sw eregA, [eregB + imm11s] is group=7 & ins0411=0xCD & ins0303=0 & imm0002s ; eregA & eregB & imm1819 & imm2427 & imm1617=1
 [imm11s = (imm0002s << 8) | (imm2427 << 4) | (imm1819 << 2);]
 {
     addr = eregB + imm11s;
+    *:4 addr = eregA;
+}
+
+#
+# [rA+rB] = rC
+#
+:sw eregA, [eregB+eregC] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1619=3
+{
+    addr:4 = eregB + eregC;
+    *:4 addr = eregA;
+}
+
+#
+# [rA+rB<<2] = rC
+#
+:sw eregA, [eregB+eregC] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1619=0xb
+{
+    addr:4 = eregB + eregC<<2;
     *:4 addr = eregA;
 }
 
@@ -327,11 +427,29 @@
 #
 # h[rB+imm9s] = rAl
 #
-:sh eregAl, [eregB + imm9s] is group=7 & ins0412=0xd5 & ins0203=0 & imm0002s ; eregAl & imm2427 & eregB & imm1719 & imm1616=1
+:sh eregAl, [eregB + imm9s] is group=7 & ins0411=0xd5 & ins0203=0 & imm0002s ; eregAl & imm2427 & eregB & imm1719 & imm1616=1
 [ imm9s = (imm0002s << 8) | (imm2427 << 4) | (imm1719 << 1); ]
 {
     addr:4 = eregB + imm9s;
     *:2 addr = eregAl:2;
+}
+
+#
+# h[rB + rC] = rAl
+#
+:sh eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=1
+{
+    addr:4 = eregB + eregC;
+    *:2 addr = eregA:2;
+}
+
+#
+# h[rB + rC<<1] = rAl
+#
+:sh eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=0x9
+{
+    addr:4 = eregB + eregC<<1;
+    *:2 addr = eregA:2;
 }
 
 ###########################################################################################
@@ -372,9 +490,19 @@
 # b[rB+simm8] = rA
 # => sb rA, [rB + simm5]
 #
-:sb eregAl, [eregB + imm8] is group=7 & ins0412=0xe5 & imm0003=2 ; eregAl & imm2427 & eregB & imm1619
+:sb eregAl, [eregB + imm8] is group=7 & ins0411=0xe5 & imm0003=2 ; eregAl & imm2427 & eregB & imm1619
 [ imm8 = imm1619 | (imm2427 << 4); ]
 {
 	local addr:4 = eregB + imm8;
 	*:1 addr = eregAl:1;
+}
+
+#
+# b[rB+rC] = rA
+# => sb rA, [rB + rC]
+#
+:sb eregA, [eregB + eregC] is group=7 & ins0011=0xed8 ; eregA & eregB & eregC & imm1619=1
+{
+	local addr:4 = eregB + eregC;
+	*:1 addr = eregA:1;
 }
