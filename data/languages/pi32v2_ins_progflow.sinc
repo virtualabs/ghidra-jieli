@@ -51,7 +51,11 @@
 #
 :call regA is group=0 & ins0412=0x00C & regA
 {
-	call regA;
+    # Set return address register
+    rets = inst_next;
+
+    # Jump to pc
+    call [regA];
 }
 
 #
@@ -59,6 +63,9 @@
 #
 :call jaddr9 is group=4 & ins0707=0 & ins0003=0x1 & jaddr9
 {
+    # Set return address register
+    rets = inst_next;
+
 	call jaddr9;
 }
 
@@ -67,7 +74,10 @@
 #
 :call jaddr23 is (group=7 & ins0612=0x2A) ... & jaddr23
 {
-	call jaddr23;
+    # Set return address register
+    rets = inst_next;
+
+	goto jaddr23;
 }
 
 #
@@ -75,6 +85,9 @@
 #
 :call jaddr32 is group=7 & ins0012=0x1f80 ; jaddr32
 {
+    # Set return address register
+    rets = inst_next;
+
     call jaddr32;
 }
 
@@ -239,6 +252,50 @@
 [ imm10s = (imm0406s << 7) | imm2531; ]
 {
     if (regA != imm10s)
+        goto jaddr9e;
+}
+
+##
+# Signed conditional jumps (reg/reg/imm10)
+##
+
+#
+# ifs (rB < rA) goto reladdr9
+# => jl rB, rA, reladdr9
+#
+:jl eregA, regA, jaddr9e is group=7 & ins0412=0xd8 & regA; eregA & jaddr9e
+{
+    if (eregA s< regA)
+        goto jaddr9e;
+}
+
+#
+# ifs (rB > rA) goto reladdr9
+# => jg rB, rA, reladdr9
+#
+:jg eregA, regA, jaddr9e is group=7 & ins0412=0xe0 & regA; eregA & jaddr9e
+{
+    if (eregA s> regA)
+        goto jaddr9e;
+}
+
+#
+# ifs (rB <= rA) goto reladdr9
+# => jle rB, rA, reladdr9
+#
+:jle eregA, regA, jaddr9e is group=7 & ins0412=0xe8 & regA; eregA & jaddr9e
+{
+    if ((eregA s< regA) || (eregA == regA))
+        goto jaddr9e;
+}
+
+#
+# ifs (rB >= rA) goto reladdr9
+# => jge rB, rA, reladdr9
+#
+:jge eregA, regA, jaddr9e is group=7 & ins0412=0xd0 & regA; eregA & jaddr9e
+{
+    if ((eregA s> regA) || (eregA == regA))
         goto jaddr9e;
 }
 
@@ -467,10 +524,6 @@
     #    goto jaddr16e;
 }
 
-#:oops is group=3 & ins0412=0x1f2 & ins0003=0; eregA ; jaddr16e
-#{
-#}
-
 ###########################################################################################
 # Code repeat     ( Impossible to implement? )
 ###########################################################################################
@@ -481,14 +534,26 @@
 :rep nwords, regA is group=0 & ins0812=0x03 & regA & imm0407
 [ nwords = (imm0407 << 1) + 2; ]
 {
-	RepeatBlock(nwords:1, regA:1);
+    # Skip instructions if counter is zero
+    if (regA == 0) goto inst_next;
+        regA = regA - 1;
+    delayslot(nwords);
 }
 
 #
 # rep nwords, uimm5 { <nwords> instruction words }
 #
-:rep nwords, imm0812 is group=4 & ins0003=0x0 & imm0407 & imm0812
-[ nwords = (imm0407 << 1) + 2; ]
+:rep #nbytes, #repiter is group=4 & ins0003=0x0 & imm0407 & imm0812
+[
+    # Compute number of bytes and number of iterations
+    nbytes = (imm0407 << 1) + 2;
+    repiter = imm0812+1;
+]
 {
-	RepeatBlock(nwords:1, imm0812:1);
+    # Set repeat counter to number of iterations
+    repcounter:4 = repiter;
+<loop>
+    delayslot(nbytes);
+    repcounter = repcounter -1;
+    if (repcounter != 0) goto <loop>;
 }

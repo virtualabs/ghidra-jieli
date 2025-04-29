@@ -172,6 +172,26 @@
 <end>
 }
 
+#
+# ifs (rA <= rB) then { ... } else { ... }
+#
+:ifs (regA <= eregC) { is group=7 & ins0011=0xE94 & regA ; eregC & imm1623=0 & ifcnt & elsecnt
+[
+    # Save instructions count for then and else branches
+    thenbranch=ifcnt+1; globalset(inst_next, thenbranch);
+    elsebranch=elsecnt; globalset(inst_next, elsebranch);
+
+    ifblock=1; globalset(inst_next, ifblock);
+]
+{
+    if (regA s> eregC) goto <else>;
+    cres=1;
+    goto <end>;
+
+<else>
+    cres=0;
+<end>
+}
 
 # 
 # if (rB == rA) then { ... } else { ... }

@@ -155,16 +155,6 @@
 }
 
 #
-# rA = h[rB+rC] (s)
-# => lh.z rA, [rB + rC]
-#
-:lh.z eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=2
-{
-	local addr:4 = eregB + eregC;
-	eregA = sext(*:2 addr);
-}
-
-#
 # rA = h[rB+rC<<1] (u)
 # => lh.z rA, [rB + rC<<1]
 #
@@ -175,13 +165,59 @@
 }
 
 #
-# rA = h[rB+rC<<1] (s)
-# => lh.z rA, [rB + rC<<1]
+# rA = h[rB++=imm8] (u)
+# => lh.z rA, [rB++=imm8]
 #
-:lh.z eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=0xa
+:lh.z eregA, [eregB++=imm8] is group=7 & ins0011=0xdd0 ; eregA & eregB & eregC & imm1619 & imm2427
+[ imm8 = (imm2427 << 4) | imm1619; ]
+{
+	local addr:4 = eregB + imm8;
+	eregA = zext(*:2 addr);
+}
+
+###########################################################################################
+# Load Halfword (sign extend)
+###########################################################################################
+
+#
+# rA = h[rB+rC] (s)
+# => lh.s rA, [rB + rC]
+#
+:lh.s eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=2
 {
 	local addr:4 = eregB + eregC;
 	eregA = sext(*:2 addr);
+}
+
+#
+# rA = h[rB+rC<<1] (s)
+# => lh.s rA, [rB + rC<<1]
+#
+:lh.s eregA, [eregB + eregC] is group=7 & ins0011=0xdd8 ; eregA & eregB & eregC & imm1619=0xa
+{
+	local addr:4 = eregB + eregC;
+	eregA = sext(*:2 addr);
+}
+
+#
+# rA = h[rB++=imm8] (s)
+# => lh.s rA, [rB++=imm8]
+#
+:lh.s eregA, [eregB++=imm8] is group=7 & ins0011=0xdd4 ; eregA & eregB & eregC & imm1619 & imm2427
+[ imm8 = (imm2427 << 4) | imm1619; ]
+{
+	local addr:4 = eregB + imm8;
+	eregA = sext(*:2 addr);
+}
+
+#
+# rA = h[rB+imm9s] (s)
+#
+:lh.s eregA, [eregB + imm9s] is group=7 & ins0411=0xd5 & ins0203=0 & imm0002s ; eregA & imm2427 & eregB & imm1719 & imm1616=0
+[ imm9s = (imm0002s << 8) | (imm2427 << 4) | (imm1719 << 1); ]
+{
+    addr:4 = eregB + imm9s;
+    eregA = *:2 addr;
 }
 
 ###########################################################################################
@@ -427,11 +463,11 @@
 #
 # h[rB+imm9s] = rAl
 #
-:sh eregAl, [eregB + imm9s] is group=7 & ins0411=0xd5 & ins0203=0 & imm0002s ; eregAl & imm2427 & eregB & imm1719 & imm1616=1
+:sh eregA, [eregB + imm9s] is group=7 & ins0411=0xd5 & ins0203=0 & imm0002s ; eregA & imm2427 & eregB & imm1719 & imm1616=1
 [ imm9s = (imm0002s << 8) | (imm2427 << 4) | (imm1719 << 1); ]
 {
     addr:4 = eregB + imm9s;
-    *:2 addr = eregAl:2;
+    *:2 addr = eregA:2;
 }
 
 #

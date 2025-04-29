@@ -126,6 +126,15 @@
 }
 
 
+#
+# rA = rB + rC
+# => add rA, rB, rC
+#
+:add eregA, eregB, eregC is group=7 & ins0011=0xB4 ; eregA & eregB & eregC & imm1619=0
+{
+    eregA = eregB + eregC;
+}
+
 ###########################################################################################
 # Subtract
 ###########################################################################################
@@ -157,6 +166,15 @@
 :sub regA, #packedimm12, eregA is group=7 & ins0411=0x0A & regA ; eregA & packedimm12
 {
     regA = packedimm12 - eregA;
+}
+
+#
+# rA = rB - rC
+# => sub rA, rB, rC
+#
+:sub eregA, eregB, eregC is group=7 & ins0011=0xB4 ; eregA & eregB & eregC & imm1619=2
+{
+    eregA = eregB - eregC;
 }
 
 ###########################################################################################

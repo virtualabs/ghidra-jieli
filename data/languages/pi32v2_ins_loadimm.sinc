@@ -47,7 +47,6 @@
 #
 # rA = imm32
 # => mov rA, #imm32
-# (cannot be parallelized)
 :mov regA, #imm32 is group=7 & ins0412=0x1FC & regA ; imm1631 ; imm3247
 [ imm32 = imm1631 | (imm3247 << 16); ]
 {
@@ -57,7 +56,6 @@
 #
 # srA = imm32
 # => mov srA, #imm32
-# (cannot be parallelized)
 :mov sregA, #imm32 is group=7 & ins0412=0x1FE & sregA ; imm1631 ; imm3247
 [ imm32 = imm1631 | (imm3247 << 16); ]
 {
