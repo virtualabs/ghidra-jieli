@@ -564,3 +564,14 @@
 	local addr:4 = eregB + eregC;
 	*:1 addr = eregA:1;
 }
+
+# Store byte in rB at b[rA+offset] and increment rA by offset.
+# b[rA++=#imm8] = rB
+# => sb rB, [rA++=#imm8]
+#
+:sb eregA, [eregB++=#imm8] is group=7 & ins0011=0xed2 ; eregA & eregB & imm1619 & imm2427
+[ imm8 = (imm2427<<4) | imm1619; ]
+{
+    *:1 eregB = eregA:1;
+    eregB = eregB + imm8;
+}
