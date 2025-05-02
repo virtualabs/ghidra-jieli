@@ -529,9 +529,27 @@
 #
 :jbe eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f29 ; eregA & packedimm12 ; jaddr16e
 {
-    #if (eregA < packedimm12)
-    #    goto jaddr16e;
+    if (eregA <= packedimm12)
+        goto jaddr16e;
 }
+
+
+#
+# if ((rA & mask) == 0) goto pcrel16sm2
+# => jmz: jump if mask zero
+:jmz eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f60 ; eregA & packedimm12 ; jaddr16e
+{
+    if ((eregA & packedimm12) == 0) goto jaddr16e;
+}
+
+#
+# if ((rA & mask) == 0) goto pcrel16sm2
+# => jmz: jump if mask not zero
+:jmnz eregA, #packedimm12, jaddr16e is group=7 & ins0012=0x1f61 ; eregA & packedimm12 ; jaddr16e
+{
+    if ((eregA & packedimm12) != 0) goto jaddr16e;
+}
+
 
 ###########################################################################################
 # Code repeat     ( Impossible to implement? )
