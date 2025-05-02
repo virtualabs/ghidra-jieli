@@ -48,14 +48,27 @@ popmapreg: r13 is counter=13 & r13 {popreg(r13);}
 popmapreg: r14 is counter=14 & r14 {popreg(r14);}
 popmapreg: r15 is counter=15 & r15 {popreg(r15);}
 
+# Pop special registers based on counter
+popmapsreg: reti is counter=0 & reti {popreg(reti);}
+popmapsreg: rete is counter=1 & rete {popreg(rete);}
+popmapsreg: retx is counter=2 & retx {popreg(retx);}
+popmapsreg: rets is counter=3 & rets {popreg(rets);}
+popmapsreg: sr4 is counter=4 & sr4 {popreg(sr4);}
+popmapsreg: psr is counter=5 & psr {popreg(psr);}
+popmapsreg: cnum is counter=6 & cnum {popreg(cnum);}
+popmapsreg: sr7 is counter=7 & sr7 {popreg(sr7);}
+
 # Bit ops
 next: is epsilon [counter=counter+1;]{}
 prev: is epsilon [counter=counter-1;]{}
 mregread: is imm1631 [bitset=(imm1631 & (1 << counter))>>counter;]{}
+msregread: is imm0003 [bitset=(imm0003 & (1 << counter))>>counter;]{}
 pshmreg: pshmapreg is pshmapreg & bitset=1 [sep=1;]{}
 pshmreg: is bitset=0 {}
 popmreg: popmapreg is popmapreg & bitset=1 [sep=1;]{}
-popmreg: is bitset=0 {} 
+popmreg: is bitset=0 {}
+popmsreg: popmapsreg is popmapsreg & bitset=1 [sep=1;]{}
+popmsreg: is bitset=0 {}
 msep: "," is  sep=1 & bitset=1 {}
 msep: "" is sep=0 | bitset=0 {}
 
@@ -72,6 +85,11 @@ popmapregs: popmapregs^popmreg^msep is counter<15 & mregread & msep & popmreg & 
 popmapregs: popmreg is counter=15 & mregread & popmreg {}
 popmap: popmapregs is popmapregs [bitset=0; counter=0; sep=0;] {}
 
+# Recursively generate our pop special registers
+popmapsregs: popmapsregs^popmsreg^msep is counter<3 & msregread & msep & popmsreg & next & popmapsregs
+    { build popmsreg; build popmapsregs; }
+popmapsregs: popmsreg^msep is counter=3 & msep & msregread & popmsreg {}
+popsrmap: popmapsregs is popmapsregs [bitset=0; counter=0; sep=0;]{}
 
 #######################################
 # Registers boundary to register list
@@ -198,6 +216,17 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 }
 
 #
+# {sregs...} = [sp++]
+# => pop {sregs...}
+#
+:pop {popsrmap} is group=0 & ins0412=0x048 ... & popsrmap
+{
+    mult_addr = sp;
+    build popsrmap;
+    sp = mult_addr;
+}
+
+#
 # {pc, regs...} = [sp++]
 # => pop {pc, regs...}
 #
@@ -243,7 +272,7 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 }
 
 #
-# [--sp] = {reg, ...}
+# {reg, ...} = [sp++]
 # => pop {reg, ...}
 #
 :pop {popmap} is group=7 & ins0011=0x8D4 ; popmap
@@ -266,8 +295,8 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 }
 
 #
-# [--sp] = {rets, reg, ...}
-# => push {rets, reg, ...}
+# {rets, reg, ...} = [sp++]
+# => pop {rets, reg, ...}
 #
 :pop {pc, popmap} is group=7 & ins0011=0x8D5 & pc ; popmap
 {
@@ -321,14 +350,14 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 }
 
 #
-# [sp+imm8] = rA
-# => sw rA, [sp+imm8]
+# rA = [sp+imm8]
+# => lw rA, [sp+imm8]
 #
-:sw eregA, [sp+imm8] is group=7 & ins0011=0x9d4 & sp ; eregA & imm1616=0 & imm1719 & imm2427
+:lw eregA, [sp+imm8] is group=7 & ins0011=0x9d4 & sp ; eregA & imm1616=0 & imm1719 & imm2427
 [ imm8 = (imm1719 << 1) | (imm2427 << 4); ]
 {
     addr:4 = sp + imm8;
-    *:4 addr = eregA;
+    eregA = *:4 addr;
 }
 
 #

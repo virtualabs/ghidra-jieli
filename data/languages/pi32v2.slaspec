@@ -161,6 +161,7 @@ define token instr(16)
     # Extra instruction type fields for group 7
     #
     ins1112 = (11,12)
+    ins0111 = (1,11)
     ins0011 = (0,11)
 	ins0311 = (3,11)
 	ins0411 = (4,11)
@@ -173,6 +174,7 @@ define token instr(16)
 	#
 	# immediate fields
 	#
+    imm0000 = (0,0)
 	imm0001s = (0,1) signed
 
 	imm0002 = (0,2)
@@ -236,6 +238,7 @@ define token instr2(16)
     imm1629 = (0,13)
     imm1630 = (0,14)
 	imm1631 = (0,15)
+    imm1631s = (0,15) signed
     imm1719 = (1,3)
     imm1727 = (1,11)
     imm1819 = (2,3)
@@ -256,6 +259,7 @@ define token instr2(16)
     imm2531 = (9,15)
     imm2631 = (10,15)
     imm2731 = (11,15)
+    imm2828 = (12,12)
     imm2831 = (12,15)
     imm2931 = (13,15)
     imm3031 = (14,15)
@@ -381,6 +385,13 @@ jaddr9e: res is imm1624s [res = imm1624s * 2 + inst_next; ] { export *:4 res;}
 jaddr12: res is imm0812 & imm0407 & imm0001s
 	[ res = ((imm0001s << 10) | (imm0407 << 6) | (imm0812 << 1)) + inst_next; ]
 	{ export *:4 res; }
+
+#
+# 16-bit jump immediate (pc-relative) for 32-bit conditional jumps
+#
+jaddr16: res is imm1631s
+    [ res = imm1631s * 2 + inst_next; ]
+    { export *:4 res; }
 
 #
 # 16-bit jump immediate (pc-relative) for 48-bit conditional jumps

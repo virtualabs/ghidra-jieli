@@ -244,6 +244,28 @@
 	regBl = regBl - 1;
 }
 
+# 
+# rA = b[++rB=imm8] (u)
+# => lb.z rA, [++rB=imm8] (positive number)
+#
+:lb.z eregA, [++eregB=#imm8] is group=7 & ins0011=0xe58 ; eregA & eregB & imm1619 & imm2427
+[ imm8 = (imm2427 << 4) | imm1619; ]
+{
+    eregB = eregB + imm8;
+    eregA = *:1 eregB;
+}
+
+# 
+# rA = b[++rB=imm8] (u)
+# => lb.z rA, [++rB=-imm8] (negative number)
+#
+:lb.z eregA, [++eregB=#imm8] is group=7 & ins0011=0xe59 ; eregA & eregB & imm1619 & imm2427
+[ imm8 = -((((1<<8) | (imm2427 << 4) | imm1619)^0x1ff) + 1); ]
+{
+    eregB = eregB + imm8;
+    eregA = *:1 eregB;
+}
+
 #
 # rA = b[rB+simm5] (u)
 # => lb.z rA, [rB + simm5]

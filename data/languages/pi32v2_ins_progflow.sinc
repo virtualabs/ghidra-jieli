@@ -430,6 +430,15 @@
         goto jaddr16e;
 }
 
+# Decrement register and jump if not zero
+# if (--rA != 0) goto pcrel16sm2
+#
+:decjnz regA, jaddr16 is group=7 & ins0412=0xa0 & regA ;  jaddr16
+{
+    regA = regA - 1;
+    if (regA != 0) goto jaddr16;
+}
+
 #
 # if (rA >= #imm12) goto pcrel16sm2
 #
