@@ -17,6 +17,15 @@
 	regAl = regAl | regBl;
 }
 
+#
+# rA = rB | rC
+# => or rA, rB, rC
+#
+:or eregA, eregB, eregC is group=7 & ins0011=0x190 ; eregA & eregB & eregC & imm1619=0
+{
+    eregA = eregB | eregC;
+}
+
 ###########################################################################################
 # XOR
 ###########################################################################################
@@ -154,4 +163,37 @@
 ]
 {
     regA = eregA & mask;
+}
+
+#
+# rA = rB & rC
+# => and rA, rB, rC
+#
+:and eregA, eregB, eregC is group=7 & ins0011=0x190 ; eregA & eregB & eregC & imm1619=2
+{
+    eregA = eregB & eregC;
+}
+
+#
+# rA = rB & not(rC)
+#
+:andnot eregA, eregB, eregC is group=7 & ins0011=0x190 ; eregA & eregB & eregC & imm1619=3
+{
+    eregA = eregB & ~(eregC);
+}
+
+# Insert bits from rB at specific position in rA (msbit to lsbit)
+# rA <= insert(rB, pos:imm5, len:imm5) # special case
+# insert regA, regB, pos, len
+#
+:insert regA, eregA, imm2327, imm1822 is group=7 & ins0411=0x1a & regA ; eregA & imm1617 & imm1822 & imm2327
+{
+    # Create a bitmask for source register
+    smask = ((1 << imm1822) - 1) & 0xffffffff;
+
+    # Create a bitmask for destination register
+    dmask = (smask << imm2327) & 0xffffffff;
+
+    # Copy register bits
+    regA = (regA & ~dmask) | ((eregA & smask)<<imm2327);
 }
