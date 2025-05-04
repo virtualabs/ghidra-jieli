@@ -77,7 +77,7 @@
     # Set return address register
     rets = inst_next;
 
-	goto jaddr23;
+	call jaddr23;
 }
 
 #
@@ -302,6 +302,17 @@
 ##
 # Unsigned conditional jumps (reg/reg/imm10)
 ##
+
+# Jump if mask is zero
+# if ((rA & rB) == 0) goto reladdr9
+# => jbmz rB, rA, reladdr9
+#
+:jmz regA, regB, jaddr16 is group=7 & ins0812=0x1a & regA & regB; jaddr16
+{
+    if ((regA & regB) == 0)
+        goto jaddr16;
+}
+
 
 #
 # if (rB < rA) goto reladdr9
