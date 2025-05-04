@@ -182,6 +182,10 @@
     eregA = eregB & ~(eregC);
 }
 
+###################################################
+# Register bits manipulation
+###################################################
+
 # Insert bits from rB at specific position in rA (msbit to lsbit)
 # rA <= insert(rB, pos:imm5, len:imm5) # special case
 # insert regA, regB, pos, len
@@ -196,4 +200,20 @@
 
     # Copy register bits
     regA = (regA & ~dmask) | ((eregA & smask)<<imm2327);
+}
+
+# Extract a number of bits from rB at specific position and set rA.
+# rA <= uextra(rB, pos:imm5, len:imm5)
+# extract regA, regB, pos, len
+#
+:extract regA, eregA, imm2327, imm1822 is group=7 & ins0411=0x1b & regA ; eregA & imm1617 & imm1822 & imm2327
+{
+    # Create a bitmask for our destination register
+    dmask = ((1 << imm1822) - 1) & 0xffffffff;
+
+    # Create a bitmask for our source register
+    smask = (dmask << imm2327) & 0xffffffff;
+
+    # Extract register bits into target register
+    regA = (eregA & smask) >> imm2327;
 }
