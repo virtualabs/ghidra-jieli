@@ -38,7 +38,7 @@ define register offset=0x300 size=8 [ contextreg ];
 define context contextreg
     # Used while parsing any if...then...else structure
     ifblock = (0,0)
-    closebracket = (1,1)
+    closebracket = (1,1) noflow
     thenbranch = (2,4)
     elsebranch = (5,6)
     
@@ -508,20 +508,27 @@ cdtinst:^theninst is thenbranch>1 & theninst {}
 
 # Last instruction in the `then` branch, set `closebracket` to
 # force the next instruction to include a closing bracket (cap'n obvious).
-# Call to theninst will decrement the `then` counter to 0.
-# 
-# (but we are still in an if block)
-cdtinst:^theninst is thenbranch=1 & theninst
+# We don't close the if block as we have some instructions in the else branch.
+cdtinst:^theninst is thenbranch=1 & theninst & elsebranch>0
     [ closebracket=1; globalset(inst_next, closebracket); ]{}
+
+# Last instruction in the `then` branch, set `closebracket` to
+# force the next instruction to include a closing bracket (cap'n obvious).
+# We close the if block.
+cdtinst:^theninst is thenbranch=1 & theninst & elsebranch=0
+    [
+        closebracket=1; globalset(inst_next, closebracket);
+        ifblock=0; globalset(inst_next, ifblock);
+    ]{}
 
 ## We are out of the `then` branch and we don't have any `else`
 ## branch, let's insert a bracket and get back to normal by
 ## exiting our if block.
-cdtinst:^"} " parainst is thenbranch=0 & elsebranch=0 & closebracket=1 & parainst
-    [
-        closebracket=0; globalset(inst_next, closebracket);
-        ifblock=0; globalset(inst_next, ifblock);
-    ]{}
+#cdtinst:^"} " parainst is thenbranch=0 & elsebranch=0 & closebracket=1 & parainst
+#    [
+#        closebracket=0; globalset(inst_next, closebracket);
+#        ifblock=0; globalset(inst_next, ifblock);
+#    ]{}
 
 # Otherwise, we are done with our `then` branch and switch to our
 # `else` branch.
@@ -529,21 +536,33 @@ cdtinst:^"} else { " elseinst is thenbranch=0 & elsebranch>1 & elseinst & closeb
     [ closebracket=0; globalset(inst_next, closebracket); ]{}
 
 # Special case: else branch only has a single instruction (keep closebracket to 1)
-cdtinst:^"} else { " elseinst is thenbranch=0 & elsebranch=1 & elseinst & closebracket=1 {}
+cdtinst:^"} else { " elseinst is thenbranch=0 & elsebranch=1 & elseinst & closebracket=1
+    [
+        ifblock=0; globalset(inst_next, ifblock);
+        closebracket=1; globalset(inst_next, closebracket);
+    ]{}
 
 # Other instructions in else branch
 cdtinst:^elseinst is thenbranch=0 & elsebranch>1 & closebracket=0 & elseinst {}
 
 # Last instruction of our `else` branch forces a close bracket for the next one
+# We also consider our if structure closed.
 cdtinst:^elseinst is thenbranch=0 & elsebranch=1 & elseinst & closebracket=0
-    [closebracket=1; globalset(inst_next, closebracket); ]{}
+    [
+        closebracket=1; globalset(inst_next, closebracket);
+        ifblock=0; globalset(inst_next, ifblock);
+    ]{}
 
 # Conditional instruction
 :^cdtinst is phase=0 & ifblock=1 & cdtinst [phase=1;]{}
 
 # Default case, we are not processing a conditional instruction.
-:^parainst is parainst & phase=0 & ifblock=0 [phase=1;]{}
+:^parainst is parainst & phase=0 & ifblock=0 & closebracket=0 [phase=1;]{}
 
+# Special case, we need to add a final bracket to an if block
+# but this instruction does not belong to the if..then..else structure.
+:^"} " parainst is parainst & phase=0 & ifblock=0 & closebracket=1
+[ phase=1; closebracket=0; globalset(inst_next, closebracket); ]{}
 
 #############################################################################
 #
