@@ -544,6 +544,15 @@
         goto jaddr16e;
 }
 
+#
+# if ((rA & imm7) != 0) goto pcrel9m2
+# => jmnz: jump if mask not zero
+#
+:jmnz regA, #imm2531, jaddr9e is group=7 & ins0412=0x85 & regA ; imm2531 & jaddr9e
+{
+    if ((regA & imm2531) != 0)
+        goto jaddr9e;
+}
 
 #
 # if ((rA & mask) == 0) goto pcrel16sm2
@@ -579,19 +588,36 @@
 }
 
 #
-# rep nwords, uimm5 { <nwords> instruction words }
+# rep nwords, uimm5  { <nwords> instruction words }
 #
 :rep #nbytes, #repiter is group=4 & ins0003=0x0 & imm0407 & imm0812
 [
     # Compute number of bytes and number of iterations
     nbytes = (imm0407 << 1) + 2;
     repiter = imm0812+1;
+
+    repblock_endaddr = inst_start + nbytes;
+    reploop=1; globalset(repblock_endaddr, reploop);
+    replen=nbytes; globalset(repblock_endaddr, replen);
+    #reploop=0; globalset(inst_next, reploop);
 ]
 {
-    # Set repeat counter to number of iterations
-    repcounter:4 = repiter;
-<loop>
-    delayslot(nbytes);
-    repcounter = repcounter -1;
-    if (repcounter != 0) goto <loop>;
+    rep_count = repiter;
+}
+
+#
+# rep nwords, uimm5  { <nwords> instruction words } (special case)
+#
+:rep #nbytes, #repiter is group=4 & ins0003=0x0 & imm0407=0 & imm0812
+[
+    # Compute number of bytes and number of iterations
+    nbytes = 2;
+    repiter = imm0812+1;
+
+    repblock_endaddr = inst_start+2;
+    reploop=1; globalset(repblock_endaddr, reploop);
+    replen=nbytes; globalset(repblock_endaddr, replen);
+]
+{
+    rep_count = repiter;
 }
