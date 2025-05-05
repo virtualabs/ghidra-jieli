@@ -27,6 +27,8 @@ define register offset=0x0160 size=4
     [
         mult_addr 	  # Special internal register for dealing with multiple stores/loads
         cres          # Register used to store any if...then...else condition result
+        rep_count     # Repeat block counter
+        rep_start     # Repeat start address
     ];
 
 ##
@@ -50,9 +52,15 @@ define context contextreg
     # Group preprocessing
     group = (13, 15)
 
+    # Repeat block
+    reploop = (16,16)
+    replen = (17,23)
+
     parallel_phase = (29,29)
     parallel = (30,30)
     phase = (31,31)
+
+    repblock_endaddr = (32,63)
 ;
 
 
@@ -285,11 +293,35 @@ macro pop(reg)
 regCxl: regCxle is regCxs=0 & regCxle { export regCxle; }
 regCxl: regCxlo is regCxs=1 & regCxlo { export regCxlo; }
 
+
+#
+# 8-bit repeated 32-bit bitmask
+# 
+bitmask8_32: res is  imm1623
+    [ res = (imm1623 << 24) | (imm1623 << 16) | (imm1623 << 8) | imm1623; ]
+    { imm:4 = res; export imm;}
+
+#
+# 16-bit repeated 32-bit bitmask
+# 
+bitmask16_32: res is  imm1623
+    [ res = (imm1623 << 24) | (imm1623 << 8); ]
+    { imm:4 = res; export imm;}
+
+
 #
 # 12-bit bitmask on second 16-bit instruction (group 7)
 #
-packedimm12: imm1625 is imm1625 & imm2627=0 { imm:4 = imm1625; export imm; }
+packedimm12: imm1623 is imm1623 & imm2427=0 { imm:4 = imm1623; export imm; }
 
+packedimm12: res is imm1623 & imm2427=3
+    [ res = (imm1623 << 24) | (imm1623 << 16) | (imm1623 << 8) | imm1623; ]
+    { imm:4 = res; export imm;}
+
+packedimm12: res is imm1623 & imm2427=1
+    [ res = (imm1623 << 24) | (imm1623 << 8); ]
+    { imm:4 = res; export imm;}
+    
 packedimm12: res is imm1622 & imm2325 & imm2627=1
     [ res = ((0x80 | imm1622) << 24 ) >> imm2325; ]
     { imm:4 = res; export imm;}
@@ -301,6 +333,35 @@ packedimm12: res is imm1622 & imm2325 & imm2627=2
 packedimm12: res is imm1622 & imm2325 & imm2627=3
     [ res = ((0x80 | imm1622) << 8 ) >> imm2325; ]
     { imm:4 = res; export imm;}
+
+
+#
+# 12-bit complemented bitmask on second 16-bit instruction (group 7)
+#
+
+notpackedimm12: res is imm1623 & imm2427=0 
+    [ res = imm1623^0xffffffff; ]
+    { imm:4 = res; export imm; }
+
+notpackedimm12: res is imm1623 & imm2427=3
+    [ res = ((imm1623 << 24) | (imm1623 << 16) | (imm1623 << 8) | imm1623)^0xffffffff; ]
+    { imm:4 = res^0xffffffff; export imm;}
+
+notpackedimm12: res is imm1623 & imm2427=1
+    [ res = ((imm1623 << 24) | (imm1623 << 8))^0xffffffff; ]
+    { imm:4 = res^0xffffffff; export imm;}
+
+notpackedimm12: res is imm1622 & imm2325 & imm2627=1
+    [ res = (((0x80 | imm1622) << 24 ) >> imm2325)^0xffffffff; ]
+    { imm:4 = 0xffffffff^res; export imm;}
+
+notpackedimm12: res is imm1622 & imm2325 & imm2627=2
+    [ res = (((0x80 | imm1622) << 16 ) >> imm2325)^0xffffffff; ]
+    { imm:4 = 0xffffffff^res; export imm;}
+
+notpackedimm12: res is imm1622 & imm2325 & imm2627=3
+    [ res = (((0x80 | imm1622) << 8 ) >> imm2325)^0xffffffff; ]
+    { imm:4 = 0xffffffff^res; export imm;}
 
 #
 # 9-bit jump immediate (pc-relative)
@@ -410,6 +471,27 @@ parainst:^instruction is parallel_phase=0 & prefix=7 & ins1112!=0b10 & instructi
 }
 
 ######################################################
+# Repeat blocks
+######################################################
+
+repstart: target is replen [target = inst_next - replen; ]
+{
+    export *:4 target;
+}
+
+# Disassemble repeat block instructions
+:^parainst is parainst & phase=0 & reploop=1 & repstart
+[ phase=1; reploop=0; globalset(inst_next, reploop); ]
+{
+    build parainst;
+
+    # Repeat until counter reaches zero
+    rep_count = rep_count - 1;
+    if (rep_count != 0) goto repstart;
+}
+
+
+######################################################
 # Conditional blocks
 #
 # The Pi32v2 architecture provides specific instructions
@@ -497,6 +579,7 @@ cdtinst:^elseinst is thenbranch=0 & elsebranch=1 & elseinst & closebracket=0
 # but this instruction does not belong to the if..then..else structure.
 :^"} " parainst is parainst & phase=0 & ifblock=0 & closebracket=1
 [ phase=1; closebracket=0; globalset(inst_next, closebracket); ]{}
+
 
 #############################################################################
 #
