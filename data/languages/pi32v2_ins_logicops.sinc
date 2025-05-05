@@ -55,6 +55,14 @@
     eregA = eregB ^ eregC;
 }
 
+#
+# rA = rB | packedimm12
+#
+:or regA, eregA, #packedimm12 is group=7 & ins0411=0x14 & regA ; eregA & packedimm12
+{
+    regA = eregA | packedimm12;
+}
+
 ###########################################################################################
 # NOT (one's complement)
 ###########################################################################################
@@ -126,10 +134,9 @@
 #
 # rA = rB & mask (10 bits inverted)
 # => and rA, rB, #mask
-:and regA, eregA, #mask is group=7 & ins0411=0x17 & regA ; imm1625 & imm2627=0 & eregA
-[ mask = imm1625^0xffffffff;]
+:and regA, eregA, #notpackedimm12 is group=7 & ins0411=0x17 & regA ; eregA & notpackedimm12
 {
-    regA = eregA & mask;
+    regA = eregA & notpackedimm12;
 }
 
 #
@@ -203,10 +210,10 @@
 }
 
 # Extract a number of bits from rB at specific position and set rA.
-# rA <= uextra(rB, pos:imm5, len:imm5)
-# extract regA, regB, pos, len
+# rA <= uextra(rB, pos:imm5, len:imm5) (unsigned)
+# uextra regA, regB, pos, len
 #
-:extract regA, eregA, imm2327, imm1822 is group=7 & ins0411=0x1b & regA ; eregA & imm1617 & imm1822 & imm2327
+:uextra regA, eregA, imm2327, imm1822 is group=7 & ins0411=0x1b & regA ; eregA & imm1617=0 & imm1822 & imm2327
 {
     # Create a bitmask for our destination register
     dmask = ((1 << imm1822) - 1) & 0xffffffff;
@@ -217,3 +224,79 @@
     # Extract register bits into target register
     regA = (eregA & smask) >> imm2327;
 }
+
+# Extract a number of bits from rB at specific position and set rA.
+# rA <= sextra(rB, pos:imm5, len:imm5) (signed)
+# sextra regA, regB, pos, len
+#
+:sextra regA, eregA, imm2327, imm1822 is group=7 & ins0411=0x1b & regA ; eregA & imm1617=1 & imm1822 & imm2327
+{
+    # Create a bitmask for our destination register
+    dmask = ((1 << imm1822) - 1) & 0xffffffff;
+
+    # Create a bitmask for our source register
+    smask = (dmask << imm2327) & 0xffffffff;
+
+    # Extract register bits into target register
+    regA = sext((eregA & smask) >> imm2327);
+}
+
+###########################################################################################
+# Bitmasks
+###########################################################################################
+
+# Apply a single-bit bitmask to rB and save result in rA
+# rA = rB & ~(1 << rC)
+# bit.nand rA, rB, rC
+#
+:bit.nand eregA,eregB, eregC is group=7 & ins0011=0x194 ; eregA & eregB & eregC & imm1619=3
+{
+    eregA = eregB & ~(1 << eregC);
+}
+
+# Apply a single-bit bitmask to rB and save result in rA
+# rA = rB & (1 << rC)
+# bit.and rA, rB, rC
+#
+:bit.and eregA,eregB, eregC is group=7 & ins0011=0x194 ; eregA & eregB & eregC & imm1619=2
+{
+    eregA = eregB & (1 << eregC);
+}
+
+# Xor a single-bit in rB and save result in rA
+# rA = rB ^ (1 << rC)
+# bit.and rA, rB, rC
+#
+:bit.xor eregA,eregB, eregC is group=7 & ins0011=0x194 ; eregA & eregB & eregC & imm1619=1
+{
+    eregA = eregB ^ (1 << eregC);
+}
+
+# Or a single-bit in rB and save result in rA
+# rA = rB ^ (1 << rC)
+# bit.or rA, rB, rC
+#
+:bit.or eregA,eregB, eregC is group=7 & ins0011=0x194 ; eregA & eregB & eregC & imm1619=0
+{
+    eregA = eregB | (1 << eregC);
+}
+
+# And [reg+imm4] with bitmask
+# [rA+imm4] &= bitmask
+# and [rA + offset], bitmask
+:and [eregA+offset], #notpackedimm12 is group=7 & ins0411=0xfc & imm0003 ; eregA & notpackedimm12
+[ offset = imm0003*4;]
+{
+    addr:4 = eregA + offset;
+    *:4 addr = *:4 addr & notpackedimm12;
+} 
+
+# Or [reg+imm4] with bitmask
+# [rA+imm4] |= bitmask
+# or [rA + offset], bitmask
+:or [eregA+offset], #packedimm12 is group=7 & ins0411=0xf0 & imm0003 ; eregA & packedimm12
+[ offset = imm0003*4; ]
+{
+    addr:4 = eregA + offset;
+    *:4 addr = *:4 addr | packedimm12;
+} 
