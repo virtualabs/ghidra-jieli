@@ -402,6 +402,7 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
     eregA = sext(*:1 addr);
 }
 
+
 #
 # rB_rA = d[sp+imm12]
 # => ldw rB_rA, [sp+imm12]
@@ -435,7 +436,7 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
 }
 
 #
-# lb[sp+imm12] = rA
+# rA = [sp+imm12] (unsigned)
 # => lb rA, [sp+imm12]
 #
 :lb eregA, [sp+imm1627] is group=7 & ins0011=0x9dc & sp; eregA & imm1627
