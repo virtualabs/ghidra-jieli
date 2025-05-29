@@ -125,12 +125,14 @@ define token instr(16)
     imm0003 = (0,3)
     imm0004 = (0,4)
 
+    imm0005 = (0,5)
 	imm0005s = (0,5) signed
 	imm0305  = (3,5)
 	imm0305s = (3,5) signed
 
 	imm0506  = (5,6)
 
+    imm0405 =  (4,5)
     imm0406  = (4,6)
 	imm0406s = (4,6) signed
 
@@ -292,21 +294,6 @@ macro pop(reg)
 # weird register split addressing..
 regCxl: regCxle is regCxs=0 & regCxle { export regCxle; }
 regCxl: regCxlo is regCxs=1 & regCxlo { export regCxlo; }
-
-
-#
-# 8-bit repeated 32-bit bitmask
-# 
-bitmask8_32: res is  imm1623
-    [ res = (imm1623 << 24) | (imm1623 << 16) | (imm1623 << 8) | imm1623; ]
-    { imm:4 = res; export imm;}
-
-#
-# 16-bit repeated 32-bit bitmask
-# 
-bitmask16_32: res is  imm1623
-    [ res = (imm1623 << 24) | (imm1623 << 8); ]
-    { imm:4 = res; export imm;}
 
 
 #

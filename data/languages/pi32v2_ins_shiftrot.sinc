@@ -92,6 +92,24 @@
     eregA = eregB >> imm6;
 }
 
+#
+# rA_rB >>= #imm6
+#
+:lsr edregA, #imm6 is group=7 & ins0011=0x1d0 ; edregA & imm2627=0 & eregB=0 & imm1619 & imm2425
+[ imm6 = (imm2425 << 4) | imm1619; ]
+{
+    edregA = edregA >> imm6;
+}
+
+#
+# rA_rB <<= #imm6
+#
+:lsl edregA, #imm6 is group=7 & ins0011=0x1d0 ; edregA & imm2627=2 & eregB=0 & imm1619 & imm2425
+[ imm6 = (imm2425 << 4) | imm1619; ]
+{
+    edregA = edregA << imm6;
+}
+
 ###########################################################################################
 # (Q) Arithmetic shift left
 ###########################################################################################
@@ -162,4 +180,18 @@
 [imm6 = (imm2425 << 4) | imm1619;]
 {
     eregA = eregB s>> imm6;
+}
+
+
+###########################################################################################
+# Logical shift left + right (used for alignment)
+###########################################################################################
+
+#
+# rA = rB <> #imm6
+#
+:lslr eregA, eregB, #imm6 is group=7 & ins0011=0x1c4 ; eregA & eregB & imm2425 & imm1619
+[imm6 = (imm2425 << 4) | imm1619;]
+{
+    eregA = (eregB << imm6) >> imm6;
 }

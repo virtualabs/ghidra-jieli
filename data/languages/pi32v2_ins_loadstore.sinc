@@ -4,6 +4,100 @@
 #
 ##################
 
+
+#########################################################
+# Registers list helpers
+#########################################################
+
+macro putreg(reg) { mult_addr = mult_addr - 4; *mult_addr = reg; }
+macro getreg(reg) { reg = *mult_addr; mult_addr = mult_addr + 4;}
+
+# Read register from memory
+ReadReg: r0 is counter=0 & r0 { getreg(r0); }
+ReadReg: r1 is counter=1 & r1 {getreg(r1);}
+ReadReg: r2 is counter=2 & r2 {getreg(r2);}
+ReadReg: r3 is counter=3 & r3 {getreg(r3);}
+ReadReg: r4 is counter=4 & r4 {getreg(r4);}
+ReadReg: r5 is counter=5 & r5 {getreg(r5);}
+ReadReg: r6 is counter=6 & r6 {getreg(r6);}
+ReadReg: r7 is counter=7 & r7 {getreg(r7);}
+ReadReg: r8 is counter=8 & r8 {getreg(r8);}
+ReadReg: r9 is counter=9 & r9 {getreg(r9);}
+ReadReg: r10 is counter=10 & r10 {getreg(r10);}
+ReadReg: r11 is counter=11 & r11 {getreg(r11);}
+ReadReg: r12 is counter=12 & r12 {getreg(r12);}
+ReadReg: r13 is counter=13 & r13 {getreg(r13);}
+ReadReg: r14 is counter=14 & r14 {getreg(r14);}
+ReadReg: r15 is counter=15 & r15 {getreg(r15);}
+
+# Pop registers based on counter
+WriteReg: r0 is counter=0 & r0 {putreg(r0);}
+WriteReg: r1 is counter=1 & r1 {putreg(r1);}
+WriteReg: r2 is counter=2 & r2 {putreg(r2);}
+WriteReg: r3 is counter=3 & r3 {putreg(r3);}
+WriteReg: r4 is counter=4 & r4 {putreg(r4);}
+WriteReg: r5 is counter=5 & r5 {putreg(r5);}
+WriteReg: r6 is counter=6 & r6 {putreg(r6);}
+WriteReg: r7 is counter=7 & r7 {putreg(r7);}
+WriteReg: r8 is counter=8 & r8 {putreg(r8);}
+WriteReg: r9 is counter=9 & r9 {putreg(r9);}
+WriteReg: r10 is counter=10 & r10 {putreg(r10);}
+WriteReg: r11 is counter=11 & r11 {putreg(r11);}
+WriteReg: r12 is counter=12 & r12 {putreg(r12);}
+WriteReg: r13 is counter=13 & r13 {putreg(r13);}
+WriteReg: r14 is counter=14 & r14 {putreg(r14);}
+WriteReg: r15 is counter=15 & r15 {putreg(r15);}
+
+# Bit ops
+NextReg: is epsilon [counter=counter+1;]{}
+#PrevReg: is epsilon [counter=counter-1;]{}
+RegInMap: is imm1631 [bitset=(imm1631 & (1 << counter))>>counter;]{}
+WriteCurrentReg: WriteReg is WriteReg & bitset=1 [sep=1;]{}
+WriteCurrentReg: is bitset=0 {}
+ReadCurrentReg: ReadReg is ReadReg & bitset=1 [sep=1;]{}
+ReadCurrentReg: is bitset=0 {}
+RegSep: "," is  sep=1 & bitset=1 {}
+RegSep: "" is sep=0 | bitset=0 {}
+
+# Recursively generate our write registers
+WriteRegsMap: WriteRegsMap^WriteCurrentReg^RegSep is counter<15 & RegInMap & RegSep & WriteCurrentReg & NextReg & WriteRegsMap
+    { build WriteRegsMap; build WriteCurrentReg; }
+WriteRegsMap: WriteCurrentReg is counter=15 & RegInMap & WriteCurrentReg {}
+WriteRegs: WriteRegsMap is WriteRegsMap [bitset=0; counter=0; sep=0;] {}
+
+
+# Recursively generate our read registers
+ReadRegsMap: ReadRegsMap^ReadCurrentReg^RegSep is counter<15 & RegInMap & RegSep & ReadCurrentReg & NextReg & ReadRegsMap
+    { build ReadRegsMap; build ReadCurrentReg; }
+ReadRegsMap: ReadCurrentReg is counter=15 & RegInMap & ReadCurrentReg {}
+ReadRegs: ReadRegsMap is ReadRegsMap [bitset=0; counter=0; sep=0;] {}
+
+##############################################################
+# Write a series of registers into [reg]
+##############################################################
+
+# Write a series of registers starting at [reg]
+# sw {reg, reg, ...}, [reg]
+#
+:sw {WriteRegs}, [regA] is group=7 & ins0411=0xB2 & regA ; WriteRegs
+{
+    mult_addr = regA;
+    build WriteRegs;
+}
+
+##############################################################
+# Read a series of registers into [reg]
+##############################################################
+
+# Write a series of registers starting at [reg]
+# sw {reg, reg, ...}, [reg]
+#
+:sw {ReadRegs}, [regA] is group=7 & ins0411=0xB0 & regA ; ReadRegs
+{
+    mult_addr = regA;
+    build ReadRegs;
+}
+
 ###########################################################################################
 # Load Double Word
 ###########################################################################################
@@ -103,10 +197,20 @@
 #
 # rA = [rB+rC<<2]
 #
-:lw eregA, [eregB+eregC] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1619=0xa
+:lw eregA, [eregB+eregC<<2] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1619=0xa
 {
     addr:4 = eregB + eregC<<2;
     eregA = *:4 addr;
+}
+
+#
+# rA = [rB++=imm8]
+#
+:lw eregA, [eregB++=imm8] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1616=0 & imm1719 & imm2427
+[ imm8 = (imm2427<<4) | imm1719<<1; ]
+{
+    eregA = *:4 eregB;
+    eregB = eregB + imm8;
 }
 
 ###########################################################################################
@@ -175,6 +279,16 @@
 	eregA = zext(*:2 addr);
 }
 
+#
+# rA = h[rB+imm9] (u)
+#
+:lh.z eregA, [eregB + imm9] is group=7 & ins0411=0xd5 & ins0203=0 & imm0000 ; eregA & imm2427 & eregB & imm1619
+[ imm9 = (imm0000 << 8) | (imm2427 << 4) | imm1619; ]
+{
+    addr:4 = eregB + imm9;
+    eregA = zext(*:2 addr);
+}
+
 ###########################################################################################
 # Load Halfword (sign extend)
 ###########################################################################################
@@ -210,14 +324,52 @@
 	eregA = sext(*:2 addr);
 }
 
+
 #
-# rA = h[rB+imm9s] (s)
+# rA = h[rB+imm9] (s)
 #
-:lh.s eregA, [eregB + imm9s] is group=7 & ins0411=0xd5 & ins0203=0 & imm0002s ; eregA & imm2427 & eregB & imm1719 & imm1616=0
-[ imm9s = (imm0002s << 8) | (imm2427 << 4) | (imm1719 << 1); ]
+:lh.s eregA, [eregB + imm9] is group=7 & ins0411=0xd5 & ins0203=1 & imm0000 ; eregA & imm2427 & eregB & imm1619
+[ imm9 = (imm0000 << 8) | (imm2427 << 4) | imm1619; ]
 {
-    addr:4 = eregB + imm9s;
-    eregA = *:2 addr;
+    addr:4 = eregB + imm9;
+    eregA = sext(*:2 addr);
+}
+
+
+###########################################################################################
+# Load Byte (sign-extend)
+###########################################################################################
+
+# Load byte pointed by rB+imm8 into rA, and then increment rB by imm8.
+# rA = b[rB ++= imm8] (signed)
+#
+:lb.s eregA, [eregB ++= #imm8] is group=7 & ins0011=0xed4 ; eregA & eregB & imm1619 & imm2427
+[ imm8 = (imm2427 << 4) | imm1619; ]
+{
+    addr:4 = eregB + imm8;
+    eregA = sext(*:1 addr);
+    eregB = eregB + imm8;
+}
+
+# Load byte pointed by rB+imm8 into rA, and then increment rB by imm8.
+# rA = b[rB ++= imm8] (signed)
+#
+:lb.s eregA, [eregB+#imm8] is group=7 & ins0011=0xe54 ; eregA & eregB & imm1619 & imm2427
+[ imm8 = (imm2427 << 4) | imm1619; ]
+{
+    addr:4 = eregB + imm8;
+    eregA = sext(*:1 addr);
+    eregB = eregB + imm8;
+}
+
+#
+# rA = b[rB+rC] (s)
+# => lb.z rA, [rB + rC]
+#
+:lb.z eregA, [eregB + eregC] is group=7 & ins0011=0xed8 ; eregA & eregB & eregC & imm1619=2
+{
+	local addr:4 = eregB + eregC;
+	eregA = sext(*:1 addr);
 }
 
 ###########################################################################################
@@ -228,7 +380,7 @@
 # rA = b[rB ++= 1] (u)
 # => lb.z rA, [rB ++= 1]
 #
-:lb.z regAl, [regBl ++= 2] is group=0 & ins0712=0x0E & ins0303=0 & regAl & regBl
+:lb.z regAl, [regBl ++= 1] is group=0 & ins0712=0x0E & ins0303=0 & regAl & regBl
 {
 	regAl = zext(*:1 regBl);
 	regBl = regBl + 1;
@@ -298,13 +450,13 @@
 }
 
 #
-# rA = b[rB+rC] (s)
-# => lb.z rA, [rB + rC]
+# rA = b[++rB=rC] (u)
+# => lb.z rA, [++rB = rC]
 #
-:lb.z eregA, [eregB + eregC] is group=7 & ins0011=0xed8 ; eregA & eregB & eregC & imm1619=2
+:lb.z eregA, [++eregB = eregC] is group=7 & ins0011=0xedc ; eregA & eregB & eregC & imm1619=0
 {
-	local addr:4 = eregB + eregC;
-	eregA = sext(*:1 addr);
+    eregB = eregB + eregC;
+    eregA = zext(*:1 eregB);
 }
 
 ###########################################################################################
@@ -441,10 +593,20 @@
 #
 # [rA+rB<<2] = rC
 #
-:sw eregA, [eregB+eregC] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1619=0xb
+:sw eregA, [eregB+eregC<<2] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1619=0xb
 {
     addr:4 = eregB + eregC<<2;
     *:4 addr = eregA;
+}
+
+#
+# [rB++=imm8] = rA
+#
+:sw eregA, [eregB++=imm8] is group=7 & ins0011=0xcd8 ; eregA & eregB & eregC & imm1617=1 & imm1819 & imm2427
+[ imm8 = (imm2427<<4) | imm1819<<2; ]
+{
+    *:4 eregB = eregA;
+    eregB = eregB + imm8;
 }
 
 ###########################################################################################
@@ -574,4 +736,14 @@
 {
     *:1 eregB = eregA:1;
     eregB = eregB + imm8;
+}
+
+#
+# b[++rA=rB] = rC
+# => sb rC, [++rA = rB]
+#
+:sb eregC, [++eregB = eregA] is group=7 & ins0011=0xedc ; eregA & eregB & eregC & imm1619=1
+{
+    eregB = eregB + eregA;
+    *:1 eregB = eregC:1;
 }

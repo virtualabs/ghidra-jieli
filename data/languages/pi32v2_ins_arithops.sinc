@@ -93,6 +93,16 @@
 }
 
 #
+# rA = rB + -imm12
+# => add rA, rb, #imm12
+#
+:add regA, eregA, #imm14 is group=7 & ins0411=0x12 & regA & imm0405; eregA & imm1627
+[ imm14 = -(((imm1627 | (imm0405<<12))^0x3fff)+1);]
+{
+    regA = eregA + imm14;
+}
+
+#
 # rA = rB + (imm12 + 4096)
 # => add rA, rb, #imm12
 #
@@ -102,6 +112,14 @@
     regA = eregA + imm12p4096;
 }
 
+#
+# rA = rB + packedimm12
+# => add rA, rB, #packedimm12
+#
+:add regA, eregA, packedimm12 is group=7 & ins0411=0x0e & regA ; eregA & packedimm12
+{
+    regA = eregA + packedimm12;
+}
 
 #
 # [rA+#imm5] += #imm16s
@@ -125,13 +143,22 @@
     *:4 addr = *addr + eregC;
 }
 
-
 #
 # rA = rB + rC
 # => add rA, rB, rC
 #
 :add eregA, eregB, eregC is group=7 & ins0011=0xB4 ; eregA & eregB & eregC & imm1619=0
 {
+    eregA = eregB + eregC;
+}
+
+# Add registers + carry into reg
+# rA = rB + rC + C
+# => addc rA, rB, rC
+#
+:addc eregA, eregB, eregC is group=7 & ins0011=0xB8 ; eregA & eregB & eregC & imm1619=0
+{
+    # TODO: handle carry
     eregA = eregB + eregC;
 }
 
@@ -204,6 +231,24 @@
 :sub eregA, eregB, eregC is group=7 & ins0011=0xB4 ; eregA & eregB & eregC & imm1619=2
 {
     eregA = eregB - eregC;
+}
+
+# Substract registers and not(C)
+# rA = rB - rC - !C
+# => subc rA, rB, rC
+#
+:subc eregA, eregB, eregC is group=7 & ins0011=0xB8 ; eregA & eregB & eregC & imm1619=2
+{
+    # TODO: handle carry !
+    eregA = eregB - eregC;
+}
+
+#
+# rA = rB - packedimm12
+# => sub rA, rB, #imm
+:sub regA, eregA, #packedimm12 is group=7 & ins0411=0x0f & regA ; eregA & packedimm12
+{
+    regA = eregA - packedimm12;
 }
 
 ###########################################################################################
@@ -288,4 +333,49 @@
 {
 
     eregA = eregC s/ eregB;
+}
+
+
+###########################################################################################
+# Absolute value
+###########################################################################################
+
+#
+# rA = abs(rB)
+#
+:abs eregA, eregC is group=7 & ins0011=0x430 ; eregA & eregC & imm1623=0
+{
+    if (eregC s>=0) goto <skip>;
+    eregA = (eregC ^ 0xffffffff) + 1;
+    goto inst_next;
+<skip>
+    eregA = eregC;
+}
+
+###########################################################################################
+# Min value
+###########################################################################################
+
+#
+# rA = umin(rB, rC) (unsigned)
+#
+:umin eregA, eregB, eregC is group=7 & ins0011=0x435 ; eregA & eregB & eregC & imm1619=0
+{
+    if (eregB <= eregC) goto <skip>;
+    eregA = eregC;
+    goto inst_next;
+<skip>
+    eregA = eregB;
+}
+
+#
+# rA = smin(rB, rC) (signed)
+#
+:smin eregA, eregB, eregC is group=7 & ins0011=0x435 ; eregA & eregB & eregC & imm1619=1
+{
+    if (eregB s<= eregC) goto <skip>;
+    eregA = eregC;
+    goto inst_next;
+<skip>
+    eregA = eregB;
 }

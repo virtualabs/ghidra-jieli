@@ -26,6 +26,26 @@
     eregA = eregB | eregC;
 }
 
+#
+# [rA+imm8] |= rB
+#
+:or [eregA+offset], eregC is group=7 & ins0011=0x864 ; eregA & eregC & imm1823 & imm1617=0
+[ offset = imm1823<<2; ]
+{
+    addr:4 = eregA + offset;
+    *:4 addr = *:4 addr | eregC;
+}
+
+#
+# [rA+imm6] |= packedimm12
+#
+:or [eregA+#offset], #packedimm12 is group=7 & ins0611=0x3C  & imm0005; eregA & packedimm12
+[ offset = imm0005*4; ]
+{
+    addr:4 = eregA + offset;
+    *:4 addr = *:4 addr | packedimm12;
+}
+
 ###########################################################################################
 # XOR
 ###########################################################################################
@@ -184,9 +204,29 @@
 #
 # rA = rB & not(rC)
 #
-:andnot eregA, eregB, eregC is group=7 & ins0011=0x190 ; eregA & eregB & eregC & imm1619=3
+:and eregA, eregB, ~eregC is group=7 & ins0011=0x190 ; eregA & eregB & eregC & imm1619=3
 {
     eregA = eregB & ~(eregC);
+}
+
+#
+# [rA+imm8] &= rB
+#
+:and [eregA+offset], eregC is group=7 & ins0011=0x864 ; eregA & eregC & imm1823 & imm1617=2
+[ offset = imm1823<<2; ]
+{
+    addr:4 = eregA + offset;
+    *:4 addr = *:4 addr & eregC;
+}
+
+#
+# [rA+imm8] &= not(rB)
+#
+:and [eregA+offset], ~eregC is group=7 & ins0011=0x864 ; eregA & eregC & imm1823 & imm1617=3
+[ offset = imm1823<<2; ]
+{
+    addr:4 = eregA + offset;
+    *:4 addr = *:4 addr & (~eregC);
 }
 
 ###################################################
@@ -241,6 +281,13 @@
     regA = sext((eregA & smask) >> imm2327);
 }
 
+# Reverse register by nibbles of 8 bits
+# rA = rev8(rB)
+:rev8 eregA, eregC is group=7 & ins0011=0x70 ; eregA & eregC & imm1623=0
+{
+    eregA = ((eregC & 0xff) << 24) | ((eregC & 0xFF00) << 8) | ((eregC & 0xFF0000)>>8) | ((eregC & 0xFF000000)>>24);
+}
+
 ###########################################################################################
 # Bitmasks
 ###########################################################################################
@@ -281,22 +328,22 @@
     eregA = eregB | (1 << eregC);
 }
 
-# And [reg+imm4] with bitmask
-# [rA+imm4] &= bitmask
+# And [reg+imm5] with bitmask
+# [rA+imm5] &= bitmask
 # and [rA + offset], bitmask
-:and [eregA+offset], #notpackedimm12 is group=7 & ins0411=0xfc & imm0003 ; eregA & notpackedimm12
-[ offset = imm0003*4;]
+:and [eregA+offset], #notpackedimm12 is group=7 & ins0511=0x7e & imm0004 ; eregA & notpackedimm12
+[ offset = imm0004*4;]
 {
     addr:4 = eregA + offset;
     *:4 addr = *:4 addr & notpackedimm12;
 } 
 
-# Or [reg+imm4] with bitmask
-# [rA+imm4] |= bitmask
-# or [rA + offset], bitmask
+# Or [reg+imm8] |= bitmask
+# [rA+imm8] |= bitmask
+# or [rA+offset], bitmask
 :or [eregA+offset], #packedimm12 is group=7 & ins0411=0xf0 & imm0003 ; eregA & packedimm12
 [ offset = imm0003*4; ]
 {
     addr:4 = eregA + offset;
     *:4 addr = *:4 addr | packedimm12;
-} 
+}

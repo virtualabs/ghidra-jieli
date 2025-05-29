@@ -190,6 +190,38 @@ poppcregs: {pc,popreglist4} is popreglist4 & pc & ins0003
     sp = mult_addr;
 }
 
+
+# /!\ Not sure that it only concerns psr/rets/reti as 6 lower bits indicate
+# 101001, which corresponds to the exact bitmap on special register bits
+# (reti:0, rets:3, psr:5)
+# Maybe considering that other registers combination might be pushed, but
+# not seen in existing code for now.
+# 
+# [--sp] = {psr, rets, reti}
+# => push {psr, rets, reti}
+# 
+:push {psr,rets,reti} is group=0 & ins0411=0x4e & regA=9 & psr & rets & reti
+{
+    mult_addr = sp;
+    pushreg(psr);
+    pushreg(rets);
+    pushreg(reti);
+    sp = mult_addr;
+}
+
+# 
+# {psr, rets, reti} = [sp++]
+# => pop {psr, rets, reti}
+# 
+:pop {psr,rets,reti} is group=0 & ins0411=0x4a & regA=9 & psr & rets & reti
+{
+    mult_addr = sp;
+    popreg(reti);
+    popreg(rets);
+    popreg(psr);
+    sp = mult_addr;
+}
+
 #
 # {rets, regs...} = [sp++]
 # => pop {rets, regs...}
